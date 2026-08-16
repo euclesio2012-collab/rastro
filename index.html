@@ -1,884 +1,1548 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>RASTRO — Identificação em Campo</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/human/3.3.6/human.js"></script>
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rastro - Cadastro, Identificação e Consulta</title>
+  <style>
+    :root{
+      --bg:#0b1220;
+      --bg2:#121a2b;
+      --card:#172338;
+      --card2:#1d2c46;
+      --line:#2b3c5e;
+      --text:#eaf1ff;
+      --muted:#99a8c7;
+      --primary:#27c2ff;
+      --primary2:#0ea5e9;
+      --ok:#22c55e;
+      --warn:#f59e0b;
+      --danger:#ef4444;
+      --shadow:0 10px 30px rgba(0,0,0,.25);
+      --radius:18px;
+    }
 
-  :root{
-    --bg:#12161B;
-    --panel:#1A2028;
-    --panel-alt:#212933;
-    --border:#2B3542;
-    --text:#E8EBEF;
-    --text-muted:#8994A3;
-    --accent:#E8A33D;
-    --accent-dim:#4A3A20;
-    --teal:#3FA796;
-    --teal-dim:#1C3833;
-    --danger:#D2555B;
-    --danger-dim:#3A2226;
-    --radius:3px;
-  }
-  *{box-sizing:border-box; margin:0; padding:0;}
-  html,body{background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; -webkit-tap-highlight-color:transparent;}
-  body{min-height:100vh; padding-bottom:90px;}
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;font-family:Arial,Helvetica,sans-serif;background:linear-gradient(180deg,var(--bg),#09101c 60%, #070c16);color:var(--text)}
+    body{min-height:100vh}
+    img{max-width:100%;display:block}
+    button,input,textarea,select{font:inherit}
+    a{color:inherit}
 
-  .mono{font-family:'IBM Plex Mono',monospace;}
-  .display{font-family:'Barlow Condensed',sans-serif; font-weight:700; letter-spacing:0.02em;}
+    .container{
+      width:min(1400px, calc(100% - 24px));
+      margin:20px auto 60px;
+    }
 
-  header{
-    padding:18px 16px 14px;
-    border-bottom:1px solid var(--border);
-    background:linear-gradient(180deg, #161B21, #12161B);
-    position:sticky; top:0; z-index:20;
-  }
-  .brand{display:flex; align-items:center; gap:10px;}
-  .brand-mark{
-    width:30px; height:30px; border:2px solid var(--accent);
-    position:relative; flex-shrink:0;
-  }
-  .brand-mark::before, .brand-mark::after{
-    content:''; position:absolute; width:8px; height:8px;
-    border-color:var(--accent); border-style:solid;
-  }
-  .brand-mark::before{ top:-2px; left:-2px; border-width:2px 0 0 2px; }
-  .brand-mark::after{ bottom:-2px; right:-2px; border-width:0 2px 2px 0; }
-  .brand-title{font-size:22px; letter-spacing:0.06em; text-transform:uppercase; line-height:1;}
-  .brand-sub{font-size:10.5px; color:var(--text-muted); letter-spacing:0.08em; text-transform:uppercase; margin-top:2px;}
+    .topbar{
+      display:flex;
+      gap:14px;
+      align-items:center;
+      justify-content:space-between;
+      padding:18px 20px;
+      border:1px solid var(--line);
+      background:rgba(23,35,56,.85);
+      backdrop-filter:blur(8px);
+      border-radius:22px;
+      box-shadow:var(--shadow);
+      position:sticky;
+      top:10px;
+      z-index:20;
+    }
 
-  .operator-row{
-    margin-top:12px; display:flex; align-items:center; gap:8px;
-    font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em;
-  }
-  .operator-row input{
-    flex:1; background:var(--panel-alt); border:1px solid var(--border); color:var(--text);
-    padding:7px 9px; border-radius:var(--radius); font-family:'IBM Plex Mono',monospace; font-size:12.5px;
-  }
-  .operator-row input:focus{outline:1px solid var(--accent); border-color:var(--accent);}
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:12px;
+    }
 
-  main{padding:16px; max-width:520px; margin:0 auto;}
-  .panel{display:none;}
-  .panel.active{display:block;}
+    .logo{
+      width:44px;
+      height:44px;
+      border-radius:14px;
+      background:linear-gradient(135deg, var(--primary), #7dd3fc);
+      display:grid;
+      place-items:center;
+      color:#03111b;
+      font-weight:900;
+      font-size:18px;
+      box-shadow:0 8px 20px rgba(39,194,255,.35);
+    }
 
-  .viewfinder{
-    position:relative; width:100%; aspect-ratio:3/4; background:#000;
-    border-radius:var(--radius); overflow:hidden; border:1px solid var(--border);
-  }
-  .viewfinder video, .viewfinder img.captured{
-    width:100%; height:100%; object-fit:cover; display:block;
-  }
-  .bracket{position:absolute; width:26px; height:26px; border-color:var(--accent); pointer-events:none;}
-  .bracket.tl{top:12px; left:12px; border-width:3px 0 0 3px;}
-  .bracket.tr{top:12px; right:12px; border-width:3px 3px 0 0;}
-  .bracket.bl{bottom:12px; left:12px; border-width:0 0 3px 3px;}
-  .bracket.br{bottom:12px; right:12px; border-width:0 3px 3px 0;}
+    .brand h1{
+      margin:0;
+      font-size:22px;
+      line-height:1.1;
+    }
 
-  .scanline{
-    position:absolute; left:0; right:0; height:2px;
-    background:linear-gradient(90deg, transparent, var(--teal), transparent);
-    box-shadow:0 0 8px var(--teal); top:0; opacity:0; pointer-events:none;
-  }
-  .scanline.active{animation:scan 1.1s linear infinite;}
-  @keyframes scan{ 0%{top:4%; opacity:1;} 90%{opacity:1;} 100%{top:94%; opacity:0;} }
+    .brand p{
+      margin:2px 0 0;
+      color:var(--muted);
+      font-size:13px;
+    }
 
-  .status-chip{
-    position:absolute; top:10px; left:50%; transform:translateX(-50%);
-    background:rgba(18,22,27,0.85); border:1px solid var(--border);
-    padding:5px 12px; border-radius:20px; font-size:11px;
-    display:flex; align-items:center; gap:6px; text-transform:uppercase; letter-spacing:0.05em;
-  }
-  .dot{width:7px; height:7px; border-radius:50%; background:var(--text-muted);}
-  .dot.live{background:var(--accent); box-shadow:0 0 6px var(--accent); animation:pulse 1.4s ease-in-out infinite;}
-  .dot.ok{background:var(--teal); box-shadow:0 0 6px var(--teal);}
-  .dot.err{background:var(--danger); box-shadow:0 0 6px var(--danger);}
-  @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:0.35;} }
+    .actions{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
 
-  .cam-controls{display:flex; gap:8px; margin-top:12px;}
-  button{
-    font-family:'Inter',sans-serif; font-weight:600; font-size:14px;
-    border-radius:var(--radius); border:1px solid var(--border); cursor:pointer;
-    padding:12px 16px; background:var(--panel-alt); color:var(--text);
-  }
-  button.primary{background:var(--accent); color:#1A1204; border-color:var(--accent); flex:1;}
-  button.primary:disabled{opacity:0.4; cursor:not-allowed;}
-  button.ghost{background:transparent; color:var(--text-muted);}
-  button.icon{flex:0 0 auto; width:46px;}
-  button.danger-btn{background:var(--danger); color:#2A0D0F; border-color:var(--danger);}
+    .tabs{
+      display:grid;
+      grid-template-columns:repeat(4,1fr);
+      gap:12px;
+      margin:20px 0;
+    }
 
-  .field-label{font-size:11px; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted); margin:16px 0 6px;}
-  .field{
-    width:100%; background:var(--panel-alt); border:1px solid var(--border); color:var(--text);
-    padding:11px 12px; border-radius:var(--radius); font-size:14.5px; font-family:'Inter',sans-serif;
-  }
-  .field:focus{outline:none; border-color:var(--accent);}
-  textarea.field{min-height:70px; resize:vertical;}
+    .tab-btn{
+      border:1px solid var(--line);
+      background:linear-gradient(180deg, var(--card), var(--card2));
+      color:var(--text);
+      padding:14px 16px;
+      border-radius:16px;
+      cursor:pointer;
+      font-weight:700;
+      transition:.2s;
+    }
 
-  .consent-box{
-    margin-top:16px; background:var(--panel); border:1px solid var(--border); border-radius:var(--radius);
-    padding:12px; display:flex; gap:10px; align-items:flex-start;
-  }
-  .consent-box input{margin-top:3px; flex-shrink:0; width:16px; height:16px; accent-color:var(--accent);}
-  .consent-box p{font-size:12px; color:var(--text-muted); line-height:1.5;}
+    .tab-btn:hover,.tab-btn.active{
+      border-color:var(--primary2);
+      box-shadow:0 0 0 1px rgba(39,194,255,.15), 0 10px 24px rgba(14,165,233,.12);
+      transform:translateY(-1px);
+    }
 
-  .card{
-    background:var(--panel); border:1px solid var(--border); border-radius:var(--radius);
-    padding:14px; margin-top:12px;
-  }
-  .card-row{display:flex; gap:12px; align-items:center;}
-  .thumb{width:56px; height:56px; border-radius:var(--radius); object-fit:cover; border:1px solid var(--border); flex-shrink:0;}
-  .card-name{font-size:16px; font-weight:600;}
-  .card-meta{font-size:11.5px; color:var(--text-muted); margin-top:2px;}
-  .tag{
-    display:inline-block; font-size:10px; text-transform:uppercase; letter-spacing:0.05em;
-    padding:3px 8px; border-radius:20px; margin-top:6px;
-  }
-  .tag.ok{background:var(--teal-dim); color:var(--teal);}
-  .tag.err{background:var(--danger-dim); color:var(--danger);}
-  .tag.amber{background:var(--accent-dim); color:var(--accent);}
+    .panel{
+      display:none;
+    }
 
-  .history-item{
-    border-top:1px solid var(--border); padding:10px 0; font-size:12.5px;
-  }
-  .history-item .ts{font-family:'IBM Plex Mono',monospace; color:var(--text);}
-  .history-item .loc{color:var(--text-muted); margin-top:2px;}
-  .history-item a{color:var(--accent); text-decoration:none;}
+    .panel.active{
+      display:block;
+    }
 
-  .empty{
-    text-align:center; padding:40px 20px; color:var(--text-muted); font-size:13px;
-  }
+    .hero-grid{
+      display:grid;
+      grid-template-columns:1.1fr .9fr;
+      gap:18px;
+      margin-bottom:18px;
+    }
 
-  nav.tabs{
-    position:fixed; bottom:0; left:0; right:0; background:#161B21; border-top:1px solid var(--border);
-    display:flex; z-index:30;
-  }
-  nav.tabs button{
-    flex:1; background:transparent; border:none; border-radius:0; color:var(--text-muted);
-    padding:12px 4px 10px; font-size:11px; text-transform:uppercase; letter-spacing:0.05em;
-    display:flex; flex-direction:column; align-items:center; gap:4px;
-  }
-  nav.tabs button.active{color:var(--accent);}
-  nav.tabs .tab-icon{width:18px; height:18px; border:1.6px solid currentColor; border-radius:2px; position:relative;}
-  nav.tabs button.active .tab-icon{background:var(--accent); border-color:var(--accent);}
+    .card{
+      border:1px solid var(--line);
+      background:linear-gradient(180deg, rgba(23,35,56,.98), rgba(16,24,40,.98));
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
 
-  .db-item{
-    background:var(--panel); border:1px solid var(--border); border-radius:var(--radius);
-    padding:12px; margin-bottom:8px; display:flex; gap:12px; align-items:center; cursor:pointer;
-  }
-  .db-item .count{margin-left:auto; text-align:right; font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--text-muted);}
-  .db-item .count b{color:var(--text); font-size:15px; display:block;}
+    .card-header{
+      padding:18px 20px 0;
+    }
 
-  .section-title{font-size:19px; margin-bottom:4px;}
-  .section-sub{font-size:12.5px; color:var(--text-muted); margin-bottom:14px;}
+    .card-header h2,.card-header h3{
+      margin:0;
+      font-size:20px;
+    }
 
-  .stat-strip{display:flex; gap:8px; margin-bottom:14px;}
-  .stat{flex:1; background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:10px 12px;}
-  .stat b{font-size:20px; display:block; font-family:'IBM Plex Mono',monospace;}
-  .stat span{font-size:10px; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.05em;}
+    .card-header p{
+      margin:8px 0 0;
+      color:var(--muted);
+      font-size:14px;
+    }
 
-  .back-link{color:var(--accent); font-size:12.5px; margin-bottom:12px; display:inline-block; cursor:pointer;}
-  #toast{
-    position:fixed; bottom:80px; left:50%; transform:translateX(-50%) translateY(20px);
-    background:var(--panel-alt); border:1px solid var(--border); padding:10px 16px; border-radius:20px;
-    font-size:12.5px; opacity:0; transition:all 0.25s ease; z-index:40; pointer-events:none; white-space:nowrap;
-  }
-  #toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
-</style>
+    .card-body{
+      padding:18px 20px 20px;
+    }
+
+    .stats{
+      display:grid;
+      grid-template-columns:repeat(4,1fr);
+      gap:14px;
+      margin-top:18px;
+    }
+
+    .stat{
+      padding:18px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.02);
+      border-radius:16px;
+    }
+
+    .stat .label{
+      color:var(--muted);
+      font-size:13px;
+      margin-bottom:8px;
+    }
+
+    .stat .value{
+      font-size:28px;
+      font-weight:900;
+    }
+
+    .grid-2{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:18px;
+    }
+
+    .grid-3{
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:14px;
+    }
+
+    .grid-4{
+      display:grid;
+      grid-template-columns:repeat(4,1fr);
+      gap:14px;
+    }
+
+    .field{
+      display:flex;
+      flex-direction:column;
+      gap:7px;
+      margin-bottom:14px;
+    }
+
+    .field label{
+      font-size:13px;
+      color:#cfe0ff;
+      font-weight:700;
+    }
+
+    .input, textarea, select{
+      width:100%;
+      background:#0d1525;
+      color:var(--text);
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:13px 14px;
+      outline:none;
+      transition:.2s;
+    }
+
+    .input:focus, textarea:focus, select:focus{
+      border-color:var(--primary2);
+      box-shadow:0 0 0 3px rgba(14,165,233,.15);
+    }
+
+    textarea{
+      min-height:96px;
+      resize:vertical;
+    }
+
+    .btn{
+      border:none;
+      border-radius:14px;
+      padding:12px 16px;
+      font-weight:800;
+      cursor:pointer;
+      transition:.2s;
+    }
+
+    .btn:hover{transform:translateY(-1px)}
+    .btn-primary{background:linear-gradient(135deg,var(--primary),var(--primary2));color:#041420}
+    .btn-secondary{background:#223350;color:var(--text);border:1px solid var(--line)}
+    .btn-success{background:linear-gradient(135deg,#22c55e,#16a34a);color:#06170d}
+    .btn-warning{background:linear-gradient(135deg,#f59e0b,#d97706);color:#241500}
+    .btn-danger{background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff}
+    .btn-ghost{background:transparent;color:var(--text);border:1px solid var(--line)}
+
+    .btn-row{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+
+    .camera-box{
+      display:grid;
+      gap:12px;
+    }
+
+    .video-wrap{
+      position:relative;
+      width:100%;
+      aspect-ratio:16/10;
+      background:#08101c;
+      border:1px solid var(--line);
+      border-radius:18px;
+      overflow:hidden;
+    }
+
+    video, canvas.preview{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      background:#08101c;
+    }
+
+    .face-guide{
+      position:absolute;
+      inset:0;
+      display:grid;
+      place-items:center;
+      pointer-events:none;
+    }
+
+    .face-guide::before{
+      content:"";
+      width:min(52%,280px);
+      aspect-ratio:1/1.2;
+      border:3px dashed rgba(125,211,252,.7);
+      border-radius:46% 46% 42% 42% / 38% 38% 50% 50%;
+      box-shadow:0 0 0 9999px rgba(5,10,20,.12);
+    }
+
+    .camera-status{
+      font-size:13px;
+      color:var(--muted);
+    }
+
+    .photo-preview{
+      width:180px;
+      aspect-ratio:3/4;
+      border-radius:18px;
+      object-fit:cover;
+      border:1px solid var(--line);
+      background:#08101c;
+    }
+
+    .note{
+      padding:12px 14px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.03);
+      border-radius:14px;
+      color:var(--muted);
+      font-size:13px;
+    }
+
+    .message{
+      margin-top:12px;
+      padding:12px 14px;
+      border-radius:14px;
+      font-size:14px;
+      font-weight:700;
+      display:none;
+    }
+
+    .message.show{display:block}
+    .message.ok{background:rgba(34,197,94,.12); border:1px solid rgba(34,197,94,.35); color:#9ae6b4}
+    .message.warn{background:rgba(245,158,11,.12); border:1px solid rgba(245,158,11,.35); color:#fcd34d}
+    .message.error{background:rgba(239,68,68,.12); border:1px solid rgba(239,68,68,.35); color:#fecaca}
+
+    .person-card{
+      display:grid;
+      grid-template-columns:220px 1fr;
+      gap:18px;
+      padding:18px;
+      border:1px solid var(--line);
+      border-radius:18px;
+      background:rgba(255,255,255,.02);
+    }
+
+    .person-photo{
+      width:100%;
+      aspect-ratio:3/4;
+      object-fit:cover;
+      border-radius:18px;
+      border:1px solid var(--line);
+      background:#0b1322;
+    }
+
+    .person-meta{
+      display:grid;
+      grid-template-columns:repeat(2,1fr);
+      gap:10px 14px;
+      margin-top:10px;
+    }
+
+    .meta-item{
+      border:1px solid var(--line);
+      background:#0d1525;
+      border-radius:14px;
+      padding:12px;
+    }
+
+    .meta-item .k{
+      color:var(--muted);
+      font-size:12px;
+      margin-bottom:4px;
+    }
+
+    .meta-item .v{
+      font-weight:700;
+      word-break:break-word;
+    }
+
+    .history-list{
+      display:grid;
+      gap:12px;
+      margin-top:14px;
+    }
+
+    .history-item{
+      border:1px solid var(--line);
+      background:#0d1525;
+      border-radius:14px;
+      padding:14px;
+    }
+
+    .history-item h4{
+      margin:0 0 8px;
+      font-size:15px;
+    }
+
+    .history-item p{
+      margin:5px 0;
+      color:#dbeafe;
+      font-size:14px;
+    }
+
+    .muted{color:var(--muted)}
+    .small{font-size:12px}
+    .section-title{
+      margin:0 0 10px;
+      font-size:18px;
+    }
+
+    .list{
+      display:grid;
+      gap:12px;
+    }
+
+    .db-item{
+      display:grid;
+      grid-template-columns:80px 1fr auto;
+      gap:14px;
+      align-items:center;
+      padding:14px;
+      border:1px solid var(--line);
+      border-radius:16px;
+      background:#0d1525;
+    }
+
+    .db-photo{
+      width:80px;
+      height:100px;
+      border-radius:12px;
+      object-fit:cover;
+      border:1px solid var(--line);
+      background:#08101c;
+    }
+
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:8px 12px;
+      background:rgba(39,194,255,.12);
+      border:1px solid rgba(39,194,255,.32);
+      color:#bfeaff;
+      border-radius:999px;
+      font-size:12px;
+      font-weight:800;
+    }
+
+    .empty{
+      padding:28px;
+      text-align:center;
+      border:1px dashed var(--line);
+      border-radius:18px;
+      color:var(--muted);
+      background:rgba(255,255,255,.02);
+    }
+
+    .divider{
+      height:1px;
+      background:var(--line);
+      margin:18px 0;
+    }
+
+    .hidden{display:none !important}
+
+    @media (max-width: 1100px){
+      .hero-grid,.grid-2,.stats,.tabs,.grid-3,.grid-4,.person-card{
+        grid-template-columns:1fr;
+      }
+      .person-meta{
+        grid-template-columns:1fr;
+      }
+    }
+
+    @media (max-width: 720px){
+      .topbar{
+        flex-direction:column;
+        align-items:flex-start;
+      }
+      .db-item{
+        grid-template-columns:1fr;
+      }
+    }
+  </style>
 </head>
 <body>
-
-<header>
-  <div class="brand">
-    <div class="brand-mark"></div>
-    <div>
-      <div class="brand-title display">RASTRO</div>
-      <div class="brand-sub mono">Protótipo de demonstração · identificação em campo</div>
-    </div>
-  </div>
-  <div class="operator-row">
-    <span>Agente</span>
-    <input id="operatorInput" placeholder="nome do agente / guarnição">
-  </div>
-</header>
-
-<main>
-
-  <!-- CADASTRAR -->
-  <section class="panel active" id="panel-cadastrar">
-    <div class="section-title display">Cadastrar pessoa</div>
-    <div class="section-sub">Captura de rosto, dados e local da abordagem — mediante consentimento.</div>
-
-    <div class="viewfinder" id="vf-cad">
-      <video id="video-cad" autoplay playsinline muted></video>
-      <img class="captured" id="shot-cad" style="display:none;">
-      <div class="bracket tl"></div><div class="bracket tr"></div>
-      <div class="bracket bl"></div><div class="bracket br"></div>
-      <div class="scanline" id="scan-cad"></div>
-      <div class="status-chip" id="status-cad"><span class="dot"></span><span class="mono">iniciando…</span></div>
-    </div>
-    <div class="cam-controls">
-      <button class="ghost icon" id="flip-cad">⟲</button>
-      <button class="primary" id="capture-cad" disabled>Capturar rosto</button>
-    </div>
-
-    <form id="form-cad" style="display:none;">
-      <div class="field-label">Nome completo</div>
-      <input class="field" id="nome-cad" required placeholder="Nome do abordado">
-
-      <div class="field-label">Documento (opcional)</div>
-      <input class="field" id="doc-cad" placeholder="RG / CPF">
-
-      <div class="field-label">Observações (opcional)</div>
-      <textarea class="field" id="obs-cad" placeholder="Informações relatadas pelo abordado"></textarea>
-
-      <div class="consent-box">
-        <input type="checkbox" id="consent-cad" required>
-        <p>O abordado foi informado sobre a captura de sua imagem e dados, e concorda voluntariamente com o registro nesta demonstração.</p>
-      </div>
-
-      <div class="cam-controls">
-        <button type="button" class="ghost" id="cancel-cad">Cancelar</button>
-        <button type="submit" class="primary" id="save-cad">Registrar cadastro</button>
-      </div>
-    </form>
-
-    <div id="result-cad"></div>
-  </section>
-
-  <!-- IDENTIFICAR -->
-  <section class="panel" id="panel-identificar">
-    <div class="section-title display">Identificar</div>
-    <div class="section-sub">Aponte a câmera para o rosto da pessoa e escaneie.</div>
-
-    <div class="viewfinder" id="vf-id">
-      <video id="video-id" autoplay playsinline muted></video>
-      <img class="captured" id="shot-id" style="display:none;">
-      <div class="bracket tl"></div><div class="bracket tr"></div>
-      <div class="bracket bl"></div><div class="bracket br"></div>
-      <div class="scanline" id="scan-id"></div>
-      <div class="status-chip" id="status-id"><span class="dot"></span><span class="mono">iniciando…</span></div>
-    </div>
-    <div class="cam-controls">
-      <button class="ghost icon" id="flip-id">⟲</button>
-      <button class="primary" id="capture-id" disabled>Escanear rosto</button>
-    </div>
-    <div class="section-sub" style="margin-top:6px;">Toque em "Escanear rosto" novamente a qualquer momento para uma nova busca.</div>
-
-    <div id="result-id"></div>
-  </section>
-
-  <!-- BASE -->
-  <section class="panel" id="panel-base">
-    <div class="section-title display">Base de dados</div>
-    <div class="section-sub">Pessoas cadastradas neste dispositivo (base local de demonstração).</div>
-
-    <div class="stat-strip">
-      <div class="stat"><b id="stat-pessoas" class="mono">0</b><span>Cadastrados</span></div>
-      <div class="stat"><b id="stat-abordagens" class="mono">0</b><span>Abordagens</span></div>
-    </div>
-
-    <div id="db-list"></div>
-    <div id="db-detail"></div>
-
-    <button class="ghost danger-btn" id="clear-db" style="width:100%; margin-top:18px;">Limpar base (demo)</button>
-  </section>
-
-</main>
-
-<nav class="tabs">
-  <button class="tab-btn active" data-tab="cadastrar"><span class="tab-icon"></span>Cadastrar</button>
-  <button class="tab-btn" data-tab="identificar"><span class="tab-icon"></span>Identificar</button>
-  <button class="tab-btn" data-tab="base"><span class="tab-icon"></span>Base</button>
-</nav>
-
-<div id="toast"></div>
-<canvas id="workCanvas" style="display:none;"></canvas>
-
-<script>
-const MATCH_THRESHOLD = 0.55; // similaridade (0–1) mínima para considerar a mesma pessoa
-let human = null;
-const humanConfig = {
-  backend: 'webgl',
-  modelBasePath: 'https://cdn.jsdelivr.net/npm/@vladmandic/human/models/',
-  filter: { enabled: false },
-  face: {
-    enabled: true,
-    detector: { enabled: true, rotation: true, maxDetected: 1 },
-    mesh: { enabled: true },
-    iris: { enabled: false },
-    description: { enabled: true },
-    emotion: { enabled: false },
-    antispoof: { enabled: false },
-    liveness: { enabled: false }
-  },
-  body: { enabled: false },
-  hand: { enabled: false },
-  object: { enabled: false },
-  gesture: { enabled: false },
-  segmentation: { enabled: false }
-};
-let modelsReady = false;
-let pendingCapture = { cad: null, id: null }; // {descriptor, dataUrl}
-let streams = { cad: null, id: null };
-let facing = { cad: 'user', id: 'environment' };
-let cameraStarting = { cad: false, id: false };
-let activeCamera = null;
-
-function toast(msg){
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  clearTimeout(toast._h);
-  toast._h = setTimeout(()=>t.classList.remove('show'), 2200);
-}
-
-function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
-
-function setStatus(which, mode, text){
-  const chip = document.getElementById('status-'+which);
-  chip.innerHTML = `<span class="dot ${mode}"></span><span class="mono">${text}</span>`;
-}
-
-// ---------- Storage ----------
-const DB_KEY = 'rastro-db-v2';
-
-async function loadDB(){
-  try{
-    const raw = localStorage.getItem(DB_KEY);
-    if(!raw) return { pessoas: [] };
-    const db = JSON.parse(raw);
-    return (db && Array.isArray(db.pessoas)) ? db : { pessoas: [] };
-  }catch(e){
-    console.error('storage load error:', e);
-    toast('Não foi possível carregar a base local');
-    return { pessoas: [] };
-  }
-}
-
-async function saveDB(db){
-  try{
-    localStorage.setItem(DB_KEY, JSON.stringify(db));
-    if(!localStorage.getItem(DB_KEY)) throw new Error('LOCAL_STORAGE_WRITE_FAILED');
-    return true;
-  }catch(e){
-    console.error('storage save error:', e);
-    toast('Falha ao salvar. Verifique o armazenamento do navegador.');
-    return false;
-  }
-}
-
-function loadOperator(){
-  const v = localStorage.getItem ? null : null; // no-op, browser localStorage disallowed in artifacts
-}
-
-// Operador salvo localmente neste navegador.
-async function initOperator(){
-  const input = document.getElementById('operatorInput');
-  try{
-    const value = localStorage.getItem('rastro-operador');
-    if(value) input.value = value;
-  }catch(e){}
-  input.addEventListener('change', ()=>{
-    try{ localStorage.setItem('rastro-operador', input.value); }catch(e){}
-  });
-}
-
-// ---------- Camera ----------
-function stopCamera(which){
-  if(streams[which]){
-    streams[which].getTracks().forEach(t=>{ try{t.stop();}catch(e){} });
-    streams[which] = null;
-  }
-  const video = document.getElementById('video-'+which);
-  if(video) video.srcObject = null;
-  if(activeCamera === which) activeCamera = null;
-}
-
-function cameraErrorMessage(err){
-  switch(err && err.name){
-    case 'NotAllowedError':
-    case 'PermissionDeniedError': return 'permissão negada';
-    case 'NotFoundError':
-    case 'DevicesNotFoundError': return 'nenhuma câmera encontrada';
-    case 'NotReadableError':
-    case 'TrackStartError': return 'câmera ocupada';
-    case 'OverconstrainedError': return 'configuração não suportada';
-    case 'SecurityError': return 'acesso bloqueado';
-    default: return (err && err.name) || 'erro desconhecido';
-  }
-}
-
-async function startCamera(which, video){
-  if(!video || cameraStarting[which]) return false;
-
-  if(streams[which] && streams[which].active){
-    setStatus(which, modelsReady?'live':'', modelsReady?'câmera ativa':'carregando modelo…');
-    document.getElementById('capture-'+which).disabled = !modelsReady;
-    return true;
-  }
-
-  if(!window.isSecureContext && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1'){
-    setStatus(which,'err','HTTPS necessário');
-    toast('A câmera exige HTTPS ou localhost.');
-    return false;
-  }
-
-  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
-    setStatus(which,'err','câmera não suportada');
-    toast('Este navegador não disponibilizou acesso à câmera.');
-    return false;
-  }
-
-  cameraStarting[which] = true;
-  const button = document.getElementById('capture-'+which);
-  button.disabled = true;
-  setStatus(which,'','solicitando câmera…');
-
-  try{
-    const other = which === 'cad' ? 'id' : 'cad';
-    if(streams[other]) stopCamera(other);
-    stopCamera(which);
-
-    let stream;
-    try{
-      stream = await navigator.mediaDevices.getUserMedia({
-        video:{
-          facingMode:{ideal:facing[which]},
-          width:{ideal:640},
-          height:{ideal:854}
-        },
-        audio:false
-      });
-    }catch(firstError){
-      if(firstError.name === 'OverconstrainedError' || firstError.name === 'NotFoundError'){
-        stream = await navigator.mediaDevices.getUserMedia({video:true,audio:false});
-      }else{
-        throw firstError;
-      }
-    }
-
-    streams[which] = stream;
-    activeCamera = which;
-    video.srcObject = stream;
-    video.muted = true;
-    video.autoplay = true;
-    video.setAttribute('playsinline','');
-
-    await new Promise((resolve,reject)=>{
-      if(video.readyState >= 2 && video.videoWidth > 0) return resolve();
-      const timeout = setTimeout(()=>reject(new Error('VIDEO_TIMEOUT')),8000);
-      video.addEventListener('loadedmetadata',()=>{
-        clearTimeout(timeout);
-        resolve();
-      },{once:true});
-    });
-
-    try{ await video.play(); }catch(e){}
-
-    setStatus(which,modelsReady?'live':'',modelsReady?'câmera ativa':'carregando modelo…');
-    button.disabled = !modelsReady;
-    return true;
-
-  }catch(e){
-    console.error('RASTRO camera error:',e);
-    stopCamera(which);
-    setStatus(which,'err',cameraErrorMessage(e));
-    button.disabled = true;
-    toast(e && e.message === 'VIDEO_TIMEOUT'
-      ? 'A câmera abriu, mas o vídeo não iniciou.'
-      : 'Câmera: '+cameraErrorMessage(e)+'. Verifique a permissão.');
-    return false;
-  }finally{
-    cameraStarting[which] = false;
-  }
-}
-
-async function flipCamera(which, video){
-  facing[which] = facing[which] === 'user' ? 'environment' : 'user';
-  stopCamera(which);
-  await startCamera(which, video);
-}
-
-// ---------- Face detection (Human library) ----------
-async function loadModels(){
-  try{
-    const HumanClass = (window.Human && (window.Human.Human || window.Human.default)) || window.Human;
-    human = new HumanClass(humanConfig);
-    await human.load();
-    await human.warmup();
-    modelsReady = true;
-    ['cad','id'].forEach(w=>{
-      if(streams[w]){
-        setStatus(w, 'live', 'câmera ativa');
-        document.getElementById('capture-'+w).disabled = false;
-      }
-    });
-  }catch(e){
-    console.error(e);
-    ['cad','id'].forEach(w=> setStatus(w, 'err', 'modelo indisponível'));
-    toast('Falha ao carregar o modelo de reconhecimento facial (conexão).');
-  }
-}
-
-async function detectFromVideo(video){
-  if(!video || !video.videoWidth || !video.videoHeight) throw new Error('VIDEO_NOT_READY');
-  if(!human || !modelsReady) throw new Error('MODELS_NOT_READY');
-
-  const canvas = document.getElementById('workCanvas');
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  const ctx = canvas.getContext('2d');
-  ctx.drawImage(video,0,0,canvas.width,canvas.height);
-
-  const result = await human.detect(canvas);
-  const face = (result.face && result.face.length && result.face[0].embedding) ? result.face[0] : null;
-  const dataUrl = canvas.toDataURL('image/jpeg',0.85);
-  return {face,dataUrl};
-}
-
-function faceSimilarity(a, b){
-  return human.match.similarity(a, b);
-}
-
-function getGeolocation(){
-  return new Promise((resolve)=>{
-    if(!navigator.geolocation){ resolve(null); return; }
-    navigator.geolocation.getCurrentPosition(
-      pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => resolve(null),
-      { timeout: 6000, enableHighAccuracy:true }
-    );
-  });
-}
-
-function fmtTime(ts){
-  const d = new Date(ts);
-  return d.toLocaleDateString('pt-BR') + ' · ' + d.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
-}
-
-// ---------- CADASTRAR flow ----------
-async function captureCad(){
-  const video = document.getElementById('video-cad');
-  document.getElementById('capture-cad').disabled = true;
-  document.getElementById('scan-cad').classList.add('active');
-  setStatus('cad','live','analisando…');
-  const { face, dataUrl } = await detectFromVideo(video);
-  document.getElementById('scan-cad').classList.remove('active');
-  if(!face){
-    setStatus('cad','err','nenhum rosto detectado');
-    document.getElementById('capture-cad').disabled = false;
-    toast('Nenhum rosto detectado. Tente novamente.');
-    return;
-  }
-  pendingCapture.cad = { descriptor: Array.from(face.embedding), dataUrl };
-  document.getElementById('shot-cad').src = dataUrl;
-  document.getElementById('shot-cad').style.display = 'block';
-  video.style.display = 'none';
-  setStatus('cad','ok','rosto capturado');
-  document.getElementById('form-cad').style.display = 'block';
-  document.getElementById('form-cad').scrollIntoView({behavior:'smooth', block:'nearest'});
-}
-
-function resetCadCamera(){
-  document.getElementById('shot-cad').style.display = 'none';
-  document.getElementById('video-cad').style.display = 'block';
-  document.getElementById('form-cad').style.display = 'none';
-  document.getElementById('form-cad').reset();
-  document.getElementById('capture-cad').disabled = !modelsReady;
-  pendingCapture.cad = null;
-  setStatus('cad', modelsReady?'live':'', modelsReady?'câmera ativa':'carregando modelo…');
-}
-
-async function submitCad(ev){
-  ev.preventDefault();
-  if(!pendingCapture.cad){ return; }
-  const nome = document.getElementById('nome-cad').value.trim();
-  const doc = document.getElementById('doc-cad').value.trim();
-  const obs = document.getElementById('obs-cad').value.trim();
-  const consent = document.getElementById('consent-cad').checked;
-  const agente = document.getElementById('operatorInput').value.trim() || 'não informado';
-  if(!nome || !consent){ toast('Preencha o nome e confirme o consentimento.'); return; }
-
-  const btn = document.getElementById('save-cad');
-  btn.disabled = true; btn.textContent = 'Salvando…';
-
-  const geo = await getGeolocation();
-  const record = {
-    lat: geo ? geo.lat : null,
-    lng: geo ? geo.lng : null,
-    timestamp: Date.now(),
-    agente
-  };
-
-  const db = await loadDB();
-  const pessoa = {
-    id: uid(),
-    nome, documento: doc, observacoes: obs,
-    descriptor: pendingCapture.cad.descriptor,
-    foto: pendingCapture.cad.dataUrl,
-    abordagens: [record]
-  };
-  db.pessoas.push(pessoa);
-  const ok = await saveDB(db);
-  btn.disabled = false; btn.textContent = 'Registrar cadastro';
-
-  if(ok){
-    document.getElementById('result-cad').innerHTML = `
-      <div class="card">
-        <div class="card-row">
-          <img class="thumb" src="${pessoa.foto}">
-          <div>
-            <div class="card-name">${escapeHtml(pessoa.nome)}</div>
-            <div class="card-meta mono">ID ${pessoa.id}</div>
-            <span class="tag ok">Cadastrado</span>
-          </div>
-        </div>
-        <div class="history-item" style="border-top:none; padding-top:12px;">
-          <div class="ts">${fmtTime(record.timestamp)}</div>
-          <div class="loc">${geo ? `${geo.lat.toFixed(5)}, ${geo.lng.toFixed(5)} — <a href="https://maps.google.com/?q=${geo.lat},${geo.lng}" target="_blank">ver mapa</a>` : 'localização indisponível'} · agente ${escapeHtml(agente)}</div>
-        </div>
-      </div>`;
-    toast('Pessoa cadastrada na base');
-    resetCadCamera();
-    refreshDbStats();
-  }
-}
-
-// ---------- IDENTIFICAR flow ----------
-async function captureId(){
-  const video = document.getElementById('video-id');
-  document.getElementById('shot-id').style.display = 'none';
-  video.style.display = 'block';
-  document.getElementById('capture-id').disabled = true;
-  document.getElementById('scan-id').classList.add('active');
-  setStatus('id','live','analisando…');
-  document.getElementById('result-id').innerHTML = '';
-
-  const { face, dataUrl } = await detectFromVideo(video);
-  document.getElementById('scan-id').classList.remove('active');
-
-  if(!face){
-    setStatus('id','err','nenhum rosto detectado');
-    document.getElementById('capture-id').disabled = false;
-    toast('Nenhum rosto detectado. Tente novamente.');
-    return;
-  }
-
-  document.getElementById('shot-id').src = dataUrl;
-  document.getElementById('shot-id').style.display = 'block';
-  video.style.display = 'none';
-
-  const descriptor = Array.from(face.embedding);
-  const db = await loadDB();
-  let best = null, bestSim = 0;
-  for(const p of db.pessoas){
-    const sim = faceSimilarity(descriptor, p.descriptor);
-    if(sim > bestSim){ bestSim = sim; best = p; }
-  }
-
-  const agente = document.getElementById('operatorInput').value.trim() || 'não informado';
-  const geo = await getGeolocation();
-
-  if(best && bestSim >= MATCH_THRESHOLD){
-    setStatus('id','ok','correspondência encontrada');
-    const record = { lat: geo?geo.lat:null, lng: geo?geo.lng:null, timestamp: Date.now(), agente };
-    best.abordagens.push(record);
-    await saveDB(db);
-
-    const history = best.abordagens.slice(0,-1).reverse();
-    document.getElementById('result-id').innerHTML = `
-      <div class="card">
-        <div class="card-row">
-          <img class="thumb" src="${best.foto}">
-          <div>
-            <div class="card-name">${escapeHtml(best.nome)}</div>
-            <div class="card-meta mono">ID ${best.id} · similaridade ${(bestSim*100).toFixed(0)}%</div>
-            <span class="tag ok">Já cadastrado</span>
-          </div>
-        </div>
-        ${best.documento ? `<div class="card-meta" style="margin-top:8px;">Documento: ${escapeHtml(best.documento)}</div>` : ''}
-        ${best.observacoes ? `<div class="card-meta" style="margin-top:4px;">Obs.: ${escapeHtml(best.observacoes)}</div>` : ''}
-        <div class="field-label" style="margin-top:14px;">Nova abordagem registrada</div>
-        <div class="history-item" style="border-top:none; padding-top:2px;">
-          <div class="ts">${fmtTime(record.timestamp)}</div>
-          <div class="loc">${geo ? `${geo.lat.toFixed(5)}, ${geo.lng.toFixed(5)} — <a href="https://maps.google.com/?q=${geo.lat},${geo.lng}" target="_blank">ver mapa</a>` : 'localização indisponível'} · agente ${escapeHtml(agente)}</div>
-        </div>
-        <div class="field-label">Histórico anterior (${history.length})</div>
-        ${history.length ? history.map(h=>`
-          <div class="history-item">
-            <div class="ts">${fmtTime(h.timestamp)}</div>
-            <div class="loc">${h.lat ? `${h.lat.toFixed(5)}, ${h.lng.toFixed(5)} — <a href="https://maps.google.com/?q=${h.lat},${h.lng}" target="_blank">ver mapa</a>` : 'localização indisponível'} · agente ${escapeHtml(h.agente)}</div>
-          </div>`).join('') : '<div class="empty" style="padding:16px 0;">Este era o primeiro registro.</div>'}
-      </div>`;
-  } else {
-    setStatus('id','err','sem correspondência');
-    document.getElementById('result-id').innerHTML = `
-      <div class="card">
-        <span class="tag err">Sem correspondência na base</span>
-        <div class="card-meta" style="margin-top:8px;">Esta pessoa ainda não está cadastrada.</div>
-        <button class="primary" style="width:100%; margin-top:12px;" id="go-cad-btn">Cadastrar esta pessoa agora</button>
-      </div>`;
-    document.getElementById('go-cad-btn').addEventListener('click', ()=>{
-      pendingCapture.cad = { descriptor, dataUrl };
-      switchTab('cadastrar');
-      document.getElementById('shot-cad').src = dataUrl;
-      document.getElementById('shot-cad').style.display = 'block';
-      document.getElementById('video-cad').style.display = 'none';
-      document.getElementById('form-cad').style.display = 'block';
-      setStatus('cad','ok','rosto capturado');
-    });
-  }
-
-  document.getElementById('capture-id').disabled = false;
-}
-
-function resetIdCamera(){
-  document.getElementById('shot-id').style.display = 'none';
-  document.getElementById('video-id').style.display = 'block';
-  document.getElementById('result-id').innerHTML = '';
-  setStatus('id', modelsReady?'live':'', modelsReady?'câmera ativa':'carregando modelo…');
-}
-
-function escapeHtml(s){
-  const d = document.createElement('div');
-  d.textContent = s || '';
-  return d.innerHTML;
-}
-
-// ---------- BASE tab ----------
-async function refreshDbStats(){
-  const db = await loadDB();
-  document.getElementById('stat-pessoas').textContent = db.pessoas.length;
-  document.getElementById('stat-abordagens').textContent = db.pessoas.reduce((n,p)=>n+p.abordagens.length,0);
-
-  const list = document.getElementById('db-list');
-  if(!db.pessoas.length){
-    list.innerHTML = '<div class="empty">Nenhuma pessoa cadastrada ainda.<br>Use a aba Cadastrar para começar.</div>';
-    return;
-  }
-  list.innerHTML = db.pessoas.slice().reverse().map(p=>`
-    <div class="db-item" data-id="${p.id}">
-      <img class="thumb" src="${p.foto}">
-      <div>
-        <div class="card-name" style="font-size:14.5px;">${escapeHtml(p.nome)}</div>
-        <div class="card-meta">${escapeHtml(p.documento || 'sem documento')}</div>
-      </div>
-      <div class="count"><b>${p.abordagens.length}</b>abordagem${p.abordagens.length===1?'':'ns'}</div>
-    </div>
-  `).join('');
-
-  list.querySelectorAll('.db-item').forEach(el=>{
-    el.addEventListener('click', async ()=>{
-      const id = el.getAttribute('data-id');
-      const fresh = await loadDB();
-      const p = fresh.pessoas.find(x=>x.id===id);
-      showDbDetail(p);
-    });
-  });
-}
-
-function showDbDetail(p){
-  const detail = document.getElementById('db-detail');
-  const hist = p.abordagens.slice().reverse();
-  detail.innerHTML = `
-    <div class="back-link" id="back-to-list">‹ voltar à lista</div>
-    <div class="card">
-      <div class="card-row">
-        <img class="thumb" src="${p.foto}">
+  <div class="container">
+    <header class="topbar">
+      <div class="brand">
+        <div class="logo">R</div>
         <div>
-          <div class="card-name">${escapeHtml(p.nome)}</div>
-          <div class="card-meta mono">ID ${p.id}</div>
+          <h1>Rastro</h1>
+          <p>Cadastro, identificação facial, consulta manual e histórico de abordagens.</p>
         </div>
       </div>
-      ${p.documento ? `<div class="card-meta" style="margin-top:8px;">Documento: ${escapeHtml(p.documento)}</div>` : ''}
-      ${p.observacoes ? `<div class="card-meta" style="margin-top:4px;">Obs.: ${escapeHtml(p.observacoes)}</div>` : ''}
-      <div class="field-label">Histórico de abordagens (${hist.length})</div>
-      ${hist.map(h=>`
-        <div class="history-item">
-          <div class="ts">${fmtTime(h.timestamp)}</div>
-          <div class="loc">${h.lat ? `${h.lat.toFixed(5)}, ${h.lng.toFixed(5)} — <a href="https://maps.google.com/?q=${h.lat},${h.lng}" target="_blank">ver mapa</a>` : 'localização indisponível'} · agente ${escapeHtml(h.agente)}</div>
-        </div>`).join('')}
-    </div>`;
-  document.getElementById('db-list').style.display = 'none';
-  detail.style.display = 'block';
-  document.getElementById('back-to-list').addEventListener('click', ()=>{
-    detail.style.display = 'none';
-    document.getElementById('db-list').style.display = 'block';
-  });
-}
 
-// ---------- Tabs ----------
-async function switchTab(name){
-  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
-  document.getElementById('panel-'+name).classList.add('active');
-  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab===name));
+      <div class="actions">
+        <button class="btn btn-secondary" onclick="exportarBase()">Exportar JSON</button>
+        <label class="btn btn-ghost" for="importFile" style="display:inline-flex;align-items:center;">
+          Importar JSON
+        </label>
+        <input id="importFile" type="file" accept=".json" class="hidden" />
+        <button class="btn btn-danger" onclick="limparBase()">Limpar base</button>
+      </div>
+    </header>
 
-  if(name==='cadastrar'){
-    await startCamera('cad',document.getElementById('video-cad'));
-  }else if(name==='identificar'){
-    await startCamera('id',document.getElementById('video-id'));
-  }else if(name==='base'){
-    stopCamera('cad');
-    stopCamera('id');
-    refreshDbStats();
-  }
-}
+    <section class="hero-grid">
+      <div class="card">
+        <div class="card-header">
+          <h2>Base de dados</h2>
+          <p>Pessoas cadastradas neste dispositivo. Base local de demonstração.</p>
+        </div>
+        <div class="card-body">
+          <div class="stats">
+            <div class="stat">
+              <div class="label">Cadastrados</div>
+              <div class="value" id="statCadastrados">0</div>
+            </div>
+            <div class="stat">
+              <div class="label">Abordagens</div>
+              <div class="value" id="statAbordagens">0</div>
+            </div>
+            <div class="stat">
+              <div class="label">CPFs únicos</div>
+              <div class="value" id="statCpfs">0</div>
+            </div>
+            <div class="stat">
+              <div class="label">Última atualização</div>
+              <div class="value" id="statAtualizacao" style="font-size:16px;font-weight:700;">--</div>
+            </div>
+          </div>
+        </div>
+      </div>
 
-// ---------- Init ----------
-document.querySelectorAll('.tab-btn').forEach(btn=>{
-  btn.addEventListener('click', ()=>switchTab(btn.dataset.tab));
-});
-document.getElementById('capture-cad').addEventListener('click', captureCad);
-document.getElementById('capture-id').addEventListener('click', captureId);
-document.getElementById('cancel-cad').addEventListener('click', resetCadCamera);
-document.getElementById('form-cad').addEventListener('submit', submitCad);
-document.getElementById('flip-cad').addEventListener('click', ()=>flipCamera('cad', document.getElementById('video-cad')));
-document.getElementById('flip-id').addEventListener('click', ()=>flipCamera('id', document.getElementById('video-id')));
-document.getElementById('clear-db').addEventListener('click', async ()=>{
-  if(confirm('Isso apagará todos os cadastros salvos neste navegador. Confirmar?')){
-    await saveDB({ pessoas: [] });
-    toast('Base limpa');
-    refreshDbStats();
-  }
-});
+      <div class="card">
+        <div class="card-header">
+          <h2>Observação</h2>
+          <p>Este modelo usa armazenamento local do navegador e comparação facial simplificada para demonstração operacional.</p>
+        </div>
+        <div class="card-body">
+          <div class="note">
+            Para GitHub Pages, esta versão funciona sem backend. A foto é salva em base64 localmente, o CPF é validado para não duplicar, e a busca facial usa comparação simplificada entre imagens capturadas para manter tudo em arquivo único.
+          </div>
+        </div>
+      </div>
+    </section>
 
-// identify tab: after a scan, tapping the button again should reset first
-document.getElementById('capture-id').addEventListener('click', function once(){
-  // if there's already a captured shot showing, reset before next scan
-});
-document.getElementById('video-id').addEventListener('click', ()=>{});
-document.getElementById('shot-id').addEventListener('click', resetIdCamera);
-document.getElementById('shot-cad').addEventListener('click', ()=>{});
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="cadastro">Cadastrar pessoa</button>
+      <button class="tab-btn" data-tab="identificar">Identificar</button>
+      <button class="tab-btn" data-tab="consulta">Consulta manual</button>
+      <button class="tab-btn" data-tab="base">Base local</button>
+    </nav>
 
-initOperator();
-loadModels();
-refreshDbStats();
+    <section class="panel active" id="tab-cadastro">
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <h3>Cadastrar pessoa</h3>
+            <p>Nome completo, filiação, documento, observações, foto/biometria facial e histórico inicial de abordagem.</p>
+          </div>
+          <div class="card-body">
+            <form id="cadastroForm">
+              <div class="field">
+                <label for="nomeCompleto">Nome completo</label>
+                <input id="nomeCompleto" class="input" required />
+              </div>
 
-setTimeout(()=>{
-  startCamera('cad',document.getElementById('video-cad'));
-},100);
+              <div class="grid-2">
+                <div class="field">
+                  <label for="nomeMae">Nome da mãe</label>
+                  <input id="nomeMae" class="input" />
+                </div>
+                <div class="field">
+                  <label for="nomePai">Nome do pai</label>
+                  <input id="nomePai" class="input" />
+                </div>
+              </div>
 
-document.addEventListener('visibilitychange',()=>{
-  if(document.hidden){
-    stopCamera('cad');
-    stopCamera('id');
-  }else{
-    const active=document.querySelector('.panel.active');
-    if(active && active.id==='panel-cadastrar'){
-      startCamera('cad',document.getElementById('video-cad'));
-    }else if(active && active.id==='panel-identificar'){
-      startCamera('id',document.getElementById('video-id'));
+              <div class="grid-3">
+                <div class="field">
+                  <label for="cpf">CPF</label>
+                  <input id="cpf" class="input" maxlength="14" placeholder="000.000.000-00" required />
+                </div>
+                <div class="field">
+                  <label for="dataNascimento">Data de nascimento</label>
+                  <input id="dataNascimento" class="input" type="date" />
+                </div>
+                <div class="field">
+                  <label for="documento">RG / outro documento</label>
+                  <input id="documento" class="input" />
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="observacoes">Observações</label>
+                <textarea id="observacoes" placeholder="Informações adicionais, sinais particulares, observações da equipe..."></textarea>
+              </div>
+
+              <div class="divider"></div>
+              <h4 class="section-title">Histórico inicial de abordagem</h4>
+
+              <div class="grid-3">
+                <div class="field">
+                  <label for="abordagemData">Data/hora</label>
+                  <input id="abordagemData" class="input" type="datetime-local" />
+                </div>
+                <div class="field">
+                  <label for="abordagemLocal">Localização da abordagem</label>
+                  <input id="abordagemLocal" class="input" placeholder="Rua, bairro, coordenada ou referência" />
+                </div>
+                <div class="field">
+                  <label for="abordagemAgente">Agente responsável</label>
+                  <input id="abordagemAgente" class="input" placeholder="Nome ou matrícula" />
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="abordagemObs">Observação da abordagem</label>
+                <textarea id="abordagemObs" placeholder="Detalhes do atendimento ou ocorrência"></textarea>
+              </div>
+
+              <div class="btn-row">
+                <button type="submit" class="btn btn-primary">Salvar cadastro</button>
+                <button type="button" class="btn btn-secondary" onclick="limparFormularioCadastro()">Limpar</button>
+              </div>
+
+              <div id="cadastroMsg" class="message"></div>
+            </form>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3>Foto / biometria facial</h3>
+            <p>Capture a foto antes de salvar o cadastro. A biometria facial é gerada localmente a partir da imagem.</p>
+          </div>
+          <div class="card-body">
+            <div class="camera-box">
+              <div class="video-wrap">
+                <video id="videoCadastro" autoplay playsinline muted></video>
+                <div class="face-guide"></div>
+              </div>
+
+              <div class="camera-status" id="cadastroCameraStatus">Câmera ainda não iniciada.</div>
+
+              <div class="btn-row">
+                <button class="btn btn-secondary" type="button" onclick="iniciarCamera('cadastro')">Iniciar câmera</button>
+                <button class="btn btn-primary" type="button" onclick="capturarFotoCadastro()">Capturar foto</button>
+                <button class="btn btn-ghost" type="button" onclick="pararCamera('cadastro')">Parar câmera</button>
+              </div>
+
+              <canvas id="canvasCadastro" class="preview hidden"></canvas>
+
+              <div>
+                <p class="small muted" style="margin:0 0 8px;">Pré-visualização</p>
+                <img id="fotoCadastroPreview" class="photo-preview" alt="Pré-visualização da pessoa cadastrada" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="tab-identificar">
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header">
+            <h3>Identificar</h3>
+            <p>Aponte a câmera para o rosto da pessoa e faça a consulta facial. Você também pode registrar nova abordagem no resultado encontrado.</p>
+          </div>
+          <div class="card-body">
+            <div class="camera-box">
+              <div class="video-wrap">
+                <video id="videoIdentificar" autoplay playsinline muted></video>
+                <div class="face-guide"></div>
+              </div>
+
+              <div class="camera-status" id="identificarCameraStatus">Câmera ainda não iniciada.</div>
+
+              <div class="btn-row">
+                <button class="btn btn-secondary" type="button" onclick="iniciarCamera('identificar')">Iniciar câmera</button>
+                <button class="btn btn-primary" type="button" onclick="escanearRosto()">Escanear rosto</button>
+                <button class="btn btn-ghost" type="button" onclick="pararCamera('identificar')">Parar câmera</button>
+              </div>
+
+              <canvas id="canvasIdentificar" class="preview hidden"></canvas>
+              <div id="identificarMsg" class="message"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3>Consulta manual rápida</h3>
+            <p>Na aba Identificar também existe consulta manual direta por CPF ou nome, para agilizar a operação.</p>
+          </div>
+          <div class="card-body">
+            <div class="grid-2">
+              <div class="field">
+                <label for="quickNome">Nome</label>
+                <input id="quickNome" class="input" />
+              </div>
+              <div class="field">
+                <label for="quickCpf">CPF</label>
+                <input id="quickCpf" class="input" />
+              </div>
+            </div>
+            <div class="btn-row">
+              <button class="btn btn-warning" onclick="consultaRapidaIdentificar()">Consultar</button>
+              <button class="btn btn-secondary" onclick="limparConsultaRapida()">Limpar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:18px;">
+        <div class="card-header">
+          <h3>Resultado da identificação</h3>
+          <p>Ao localizar a pessoa, o sistema exibe foto, dados cadastrais, histórico, localização das abordagens e agente responsável.</p>
+        </div>
+        <div class="card-body">
+          <div id="resultadoIdentificacao" class="empty">
+            Nenhuma pessoa identificada ainda.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="tab-consulta">
+      <div class="card">
+        <div class="card-header">
+          <h3>Consulta manual</h3>
+          <p>Pesquise por nome, CPF, mãe, pai, data de nascimento e documento. Você pode combinar os campos.</p>
+        </div>
+        <div class="card-body">
+          <div class="grid-3">
+            <div class="field">
+              <label for="filtroNome">Nome</label>
+              <input id="filtroNome" class="input" />
+            </div>
+            <div class="field">
+              <label for="filtroCpf">CPF</label>
+              <input id="filtroCpf" class="input" />
+            </div>
+            <div class="field">
+              <label for="filtroNascimento">Data de nascimento</label>
+              <input id="filtroNascimento" class="input" type="date" />
+            </div>
+            <div class="field">
+              <label for="filtroMae">Nome da mãe</label>
+              <input id="filtroMae" class="input" />
+            </div>
+            <div class="field">
+              <label for="filtroPai">Nome do pai</label>
+              <input id="filtroPai" class="input" />
+            </div>
+            <div class="field">
+              <label for="filtroDocumento">RG / outro documento</label>
+              <input id="filtroDocumento" class="input" />
+            </div>
+          </div>
+
+          <div class="btn-row">
+            <button class="btn btn-primary" onclick="consultarManual()">Consultar</button>
+            <button class="btn btn-secondary" onclick="limparFiltrosConsulta()">Limpar filtros</button>
+          </div>
+
+          <div class="divider"></div>
+
+          <div id="resultadoConsulta" class="empty">
+            Preencha um ou mais campos e faça a pesquisa.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="tab-base">
+      <div class="card">
+        <div class="card-header">
+          <h3>Base local</h3>
+          <p>Pessoas cadastradas neste dispositivo. Você pode abrir, editar ou excluir registros.</p>
+        </div>
+        <div class="card-body">
+          <div id="baseLista" class="list"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const STORAGE_KEY = "rastro_base_v4";
+    let db = carregarBase();
+    let streamCadastro = null;
+    let streamIdentificar = null;
+    let fotoCadastroBase64 = "";
+    let embeddingCadastro = null;
+    let ultimoResultadoId = null;
+
+    const els = {
+      tabs: document.querySelectorAll(".tab-btn"),
+      panels: document.querySelectorAll(".panel"),
+      cadastroForm: document.getElementById("cadastroForm"),
+      cadastroMsg: document.getElementById("cadastroMsg"),
+      identificarMsg: document.getElementById("identificarMsg"),
+      resultadoIdentificacao: document.getElementById("resultadoIdentificacao"),
+      resultadoConsulta: document.getElementById("resultadoConsulta"),
+      baseLista: document.getElementById("baseLista"),
+      statCadastrados: document.getElementById("statCadastrados"),
+      statAbordagens: document.getElementById("statAbordagens"),
+      statCpfs: document.getElementById("statCpfs"),
+      statAtualizacao: document.getElementById("statAtualizacao"),
+      importFile: document.getElementById("importFile"),
+    };
+
+    document.querySelectorAll("#cpf, #quickCpf, #filtroCpf").forEach(el => {
+      el.addEventListener("input", e => e.target.value = formatarCPF(e.target.value));
+    });
+
+    els.tabs.forEach(btn => {
+      btn.addEventListener("click", () => trocarAba(btn.dataset.tab));
+    });
+
+    els.cadastroForm.addEventListener("submit", salvarCadastro);
+    els.importFile.addEventListener("change", importarBase);
+
+    atualizarTudo();
+
+    function trocarAba(tab){
+      els.tabs.forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
+      els.panels.forEach(p => p.classList.toggle("active", p.id === "tab-" + tab));
     }
-  }
-});
 
-window.addEventListener('pagehide',()=>{
-  stopCamera('cad');
-  stopCamera('id');
-});
-</script>
+    function carregarBase(){
+      try{
+        const raw = localStorage.getItem(STORAGE_KEY);
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed : [];
+      }catch(e){
+        return [];
+      }
+    }
+
+    function salvarBase(){
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+    }
+
+    function atualizarTudo(){
+      salvarBase();
+      renderStats();
+      renderBase();
+    }
+
+    function renderStats(){
+      const cadastrados = db.length;
+      const abordagens = db.reduce((acc,p) => acc + (Array.isArray(p.historicoAbordagens) ? p.historicoAbordagens.length : 0), 0);
+      const cpfs = new Set(db.map(p => normalizarCPF(p.cpf)).filter(Boolean)).size;
+      const ultima = db.map(p => p.atualizadoEm || p.criadoEm).filter(Boolean).sort().pop();
+
+      els.statCadastrados.textContent = cadastrados;
+      els.statAbordagens.textContent = abordagens;
+      els.statCpfs.textContent = cpfs;
+      els.statAtualizacao.textContent = ultima ? formatarDataHora(ultima) : "--";
+    }
+
+    function mostrarMensagem(el, tipo, texto){
+      el.className = "message show " + tipo;
+      el.textContent = texto;
+    }
+
+    function limparMensagem(el){
+      el.className = "message";
+      el.textContent = "";
+    }
+
+    async function iniciarCamera(tipo){
+      const video = tipo === "cadastro" ? document.getElementById("videoCadastro") : document.getElementById("videoIdentificar");
+      const status = tipo === "cadastro" ? document.getElementById("cadastroCameraStatus") : document.getElementById("identificarCameraStatus");
+
+      try{
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false
+        });
+        video.srcObject = stream;
+        status.textContent = "Câmera iniciada com sucesso.";
+        if(tipo === "cadastro") streamCadastro = stream;
+        else streamIdentificar = stream;
+      }catch(err){
+        status.textContent = "Não foi possível acessar a câmera. Verifique permissões do navegador.";
+      }
+    }
+
+    function pararCamera(tipo){
+      const video = tipo === "cadastro" ? document.getElementById("videoCadastro") : document.getElementById("videoIdentificar");
+      const status = tipo === "cadastro" ? document.getElementById("cadastroCameraStatus") : document.getElementById("identificarCameraStatus");
+      const stream = tipo === "cadastro" ? streamCadastro : streamIdentificar;
+
+      if(stream){
+        stream.getTracks().forEach(t => t.stop());
+      }
+      video.srcObject = null;
+      if(tipo === "cadastro") streamCadastro = null;
+      else streamIdentificar = null;
+      status.textContent = "Câmera parada.";
+    }
+
+    function capturarFrame(video, canvas){
+      const w = video.videoWidth || 640;
+      const h = video.videoHeight || 480;
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(video, 0, 0, w, h);
+      return canvas.toDataURL("image/jpeg", 0.9);
+    }
+
+    function extrairEmbedding(canvas){
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+      const temp = document.createElement("canvas");
+      temp.width = 16;
+      temp.height = 16;
+      const tctx = temp.getContext("2d", { willReadFrequently: true });
+      tctx.drawImage(canvas, 0, 0, 16, 16);
+      const data = tctx.getImageData(0,0,16,16).data;
+      const out = [];
+      for(let i=0; i<data.length; i+=4){
+        const r = data[i], g = data[i+1], b = data[i+2];
+        const gray = (r*0.299 + g*0.587 + b*0.114) / 255;
+        out.push(Number(gray.toFixed(4)));
+      }
+      return out;
+    }
+
+    function distanciaEmb(a,b){
+      if(!a || !b || a.length !== b.length) return Infinity;
+      let sum = 0;
+      for(let i=0;i<a.length;i++){
+        const d = a[i] - b[i];
+        sum += d*d;
+      }
+      return Math.sqrt(sum / a.length);
+    }
+
+    function capturarFotoCadastro(){
+      const video = document.getElementById("videoCadastro");
+      const canvas = document.getElementById("canvasCadastro");
+      const preview = document.getElementById("fotoCadastroPreview");
+
+      if(!video.srcObject){
+        mostrarMensagem(els.cadastroMsg, "warn", "Inicie a câmera antes de capturar a foto.");
+        return;
+      }
+
+      fotoCadastroBase64 = capturarFrame(video, canvas);
+      embeddingCadastro = extrairEmbedding(canvas);
+      preview.src = fotoCadastroBase64;
+      mostrarMensagem(els.cadastroMsg, "ok", "Foto capturada com sucesso.");
+    }
+
+    function salvarCadastro(e){
+      e.preventDefault();
+      limparMensagem(els.cadastroMsg);
+
+      const nomeCompleto = val("nomeCompleto");
+      const nomeMae = val("nomeMae");
+      const nomePai = val("nomePai");
+      const cpf = formatarCPF(val("cpf"));
+      const cpfNormalizado = normalizarCPF(cpf);
+      const dataNascimento = val("dataNascimento");
+      const documento = val("documento");
+      const observacoes = val("observacoes");
+
+      if(!nomeCompleto || !cpfNormalizado){
+        mostrarMensagem(els.cadastroMsg, "error", "Nome completo e CPF são obrigatórios.");
+        return;
+      }
+
+      if(cpfNormalizado.length !== 11){
+        mostrarMensagem(els.cadastroMsg, "error", "CPF inválido. Informe os 11 dígitos.");
+        return;
+      }
+
+      const existente = db.find(p => normalizarCPF(p.cpf) === cpfNormalizado);
+      if(existente){
+        mostrarMensagem(els.cadastroMsg, "error", "Já existe um cadastro com este CPF.");
+        return;
+      }
+
+      if(!fotoCadastroBase64 || !embeddingCadastro){
+        mostrarMensagem(els.cadastroMsg, "warn", "Capture a foto/biometria facial antes de salvar.");
+        return;
+      }
+
+      const historicoAbordagens = [];
+      const abordagem = montarAbordagemDoFormulario();
+      if(abordagem) historicoAbordagens.push(abordagem);
+
+      const now = new Date().toISOString();
+      const pessoa = {
+        id: gerarId(),
+        nomeCompleto,
+        nomeMae,
+        nomePai,
+        cpf,
+        cpfNormalizado,
+        dataNascimento,
+        documento,
+        observacoes,
+        foto: fotoCadastroBase64,
+        biometriaFacial: embeddingCadastro,
+        historicoAbordagens,
+        criadoEm: now,
+        atualizadoEm: now
+      };
+
+      db.unshift(pessoa);
+      atualizarTudo();
+      limparFormularioCadastro();
+      mostrarMensagem(els.cadastroMsg, "ok", "Cadastro salvo com sucesso.");
+    }
+
+    function montarAbordagemDoFormulario(){
+      const dataHora = val("abordagemData");
+      const localizacao = val("abordagemLocal");
+      const agente = val("abordagemAgente");
+      const observacao = val("abordagemObs");
+
+      if(!dataHora && !localizacao && !agente && !observacao) return null;
+
+      return {
+        id: gerarId(),
+        dataHora: dataHora || new Date().toISOString().slice(0,16),
+        localizacao,
+        agenteResponsavel: agente,
+        observacao
+      };
+    }
+
+    function limparFormularioCadastro(){
+      els.cadastroForm.reset();
+      fotoCadastroBase64 = "";
+      embeddingCadastro = null;
+      document.getElementById("fotoCadastroPreview").src = "";
+      limparMensagem(els.cadastroMsg);
+    }
+
+    function escanearRosto(){
+      limparMensagem(els.identificarMsg);
+      const video = document.getElementById("videoIdentificar");
+      const canvas = document.getElementById("canvasIdentificar");
+
+      if(!video.srcObject){
+        mostrarMensagem(els.identificarMsg, "warn", "Inicie a câmera antes de escanear.");
+        return;
+      }
+
+      if(db.length === 0){
+        mostrarMensagem(els.identificarMsg, "warn", "A base está vazia.");
+        return;
+      }
+
+      capturarFrame(video, canvas);
+      const emb = extrairEmbedding(canvas);
+
+      let melhor = null;
+      let melhorDist = Infinity;
+
+      db.forEach(p => {
+        const dist = distanciaEmb(emb, p.biometriaFacial);
+        if(dist < melhorDist){
+          melhorDist = dist;
+          melhor = p;
+        }
+      });
+
+      const limite = 0.115;
+      if(melhor && melhorDist <= limite){
+        ultimoResultadoId = melhor.id;
+        renderResultadoPessoa(els.resultadoIdentificacao, melhor, true, melhorDist);
+        mostrarMensagem(els.identificarMsg, "ok", "Pessoa localizada na base.");
+      }else{
+        ultimoResultadoId = null;
+        els.resultadoIdentificacao.innerHTML = '<div class="empty">Nenhuma pessoa compatível encontrada pela consulta facial.</div>';
+        mostrarMensagem(els.identificarMsg, "warn", "Nenhuma correspondência facial encontrada.");
+      }
+    }
+
+    function consultaRapidaIdentificar(){
+      const nome = val("quickNome").toLowerCase().trim();
+      const cpf = normalizarCPF(val("quickCpf"));
+      let resultados = db.filter(p => {
+        const okNome = !nome || (p.nomeCompleto || "").toLowerCase().includes(nome);
+        const okCpf = !cpf || normalizarCPF(p.cpf) === cpf;
+        return okNome && okCpf;
+      });
+
+      if(resultados.length === 1){
+        ultimoResultadoId = resultados[0].id;
+        renderResultadoPessoa(els.resultadoIdentificacao, resultados[0], true);
+        mostrarMensagem(els.identificarMsg, "ok", "Pessoa localizada por consulta manual rápida.");
+      }else if(resultados.length > 1){
+        renderListaResultados(els.resultadoIdentificacao, resultados, true);
+        mostrarMensagem(els.identificarMsg, "warn", "Foram encontrados vários resultados. Selecione um.");
+      }else{
+        els.resultadoIdentificacao.innerHTML = '<div class="empty">Nenhum resultado encontrado na consulta rápida.</div>';
+        mostrarMensagem(els.identificarMsg, "warn", "Nenhuma pessoa encontrada.");
+      }
+    }
+
+    function limparConsultaRapida(){
+      document.getElementById("quickNome").value = "";
+      document.getElementById("quickCpf").value = "";
+      els.resultadoIdentificacao.innerHTML = '<div class="empty">Nenhuma pessoa identificada ainda.</div>';
+      limparMensagem(els.identificarMsg);
+    }
+
+    function consultarManual(){
+      const filtros = {
+        nome: val("filtroNome").toLowerCase().trim(),
+        cpf: normalizarCPF(val("filtroCpf")),
+        mae: val("filtroMae").toLowerCase().trim(),
+        pai: val("filtroPai").toLowerCase().trim(),
+        nascimento: val("filtroNascimento"),
+        documento: val("filtroDocumento").toLowerCase().trim(),
+      };
+
+      const nenhum = Object.values(filtros).every(v => !v);
+      if(nenhum){
+        els.resultadoConsulta.innerHTML = '<div class="empty">Informe pelo menos um campo para consultar.</div>';
+        return;
+      }
+
+      const resultados = db.filter(p => {
+        const okNome = !filtros.nome || (p.nomeCompleto || "").toLowerCase().includes(filtros.nome);
+        const okCpf = !filtros.cpf || normalizarCPF(p.cpf) === filtros.cpf;
+        const okMae = !filtros.mae || (p.nomeMae || "").toLowerCase().includes(filtros.mae);
+        const okPai = !filtros.pai || (p.nomePai || "").toLowerCase().includes(filtros.pai);
+        const okNascimento = !filtros.nascimento || (p.dataNascimento || "") === filtros.nascimento;
+        const okDocumento = !filtros.documento || (p.documento || "").toLowerCase().includes(filtros.documento);
+        return okNome && okCpf && okMae && okPai && okNascimento && okDocumento;
+      });
+
+      if(resultados.length === 0){
+        els.resultadoConsulta.innerHTML = '<div class="empty">Nenhum registro encontrado.</div>';
+      }else if(resultados.length === 1){
+        renderResultadoPessoa(els.resultadoConsulta, resultados[0], false);
+      }else{
+        renderListaResultados(els.resultadoConsulta, resultados, false);
+      }
+    }
+
+    function limparFiltrosConsulta(){
+      ["filtroNome","filtroCpf","filtroMae","filtroPai","filtroNascimento","filtroDocumento"].forEach(id => {
+        document.getElementById(id).value = "";
+      });
+      els.resultadoConsulta.innerHTML = '<div class="empty">Preencha um ou mais campos e faça a pesquisa.</div>';
+    }
+
+    function renderListaResultados(container, lista, noModoIdentificar){
+      container.innerHTML = `
+        <div class="list">
+          ${lista.map(p => `
+            <div class="db-item">
+              <img class="db-photo" src="${p.foto || ''}" alt="Foto de ${esc(p.nomeCompleto)}" />
+              <div>
+                <div style="font-size:18px;font-weight:800;margin-bottom:6px;">${esc(p.nomeCompleto || '-')}</div>
+                <div class="small muted">CPF: ${esc(p.cpf || '-')}</div>
+                <div class="small muted">Mãe: ${esc(p.nomeMae || '-')}</div>
+                <div class="small muted">Nascimento: ${esc(formatarData(p.dataNascimento) || '-')}</div>
+              </div>
+              <div class="btn-row">
+                <button class="btn btn-primary" onclick="abrirPessoaPorId('${p.id}','${noModoIdentificar ? 'identificar' : 'consulta'}')">Abrir</button>
+              </div>
+            </div>
+          `).join("")}
+        </div>
+      `;
+    }
+
+    function abrirPessoaPorId(id, origem){
+      const pessoa = db.find(p => p.id === id);
+      if(!pessoa) return;
+      if(origem === "identificar"){
+        ultimoResultadoId = id;
+        renderResultadoPessoa(els.resultadoIdentificacao, pessoa, true);
+      }else{
+        renderResultadoPessoa(els.resultadoConsulta, pessoa, false);
+      }
+    }
+
+    function renderResultadoPessoa(container, pessoa, permitirNovaAbordagem = false, score = null){
+      container.innerHTML = `
+        <div class="person-card">
+          <div>
+            <img class="person-photo" src="${pessoa.foto || ''}" alt="Foto de ${esc(pessoa.nomeCompleto)}" />
+            <div style="margin-top:12px; display:flex; flex-wrap:wrap; gap:8px;">
+              <span class="badge">ID: ${esc(pessoa.id)}</span>
+              ${score !== null ? `<span class="badge">Similaridade: ${(100 - Math.min(score * 1000, 99)).toFixed(1)}%</span>` : ""}
+            </div>
+          </div>
+
+          <div>
+            <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:flex-start;">
+              <div>
+                <h3 style="margin:0;font-size:26px;">${esc(pessoa.nomeCompleto || "-")}</h3>
+                <p class="muted" style="margin:8px 0 0;">Cadastro completo e histórico operacional.</p>
+              </div>
+              <div class="btn-row">
+                <button class="btn btn-warning" onclick="abrirEdicao('${pessoa.id}','${container.id}')">Editar cadastro</button>
+                <button class="btn btn-secondary" onclick="adicionarAbordagemPrompt('${pessoa.id}','${container.id}')">Nova abordagem</button>
+              </div>
+            </div>
+
+            <div class="person-meta">
+              <div class="meta-item"><div class="k">Nome da mãe</div><div class="v">${esc(pessoa.nomeMae || "-")}</div></div>
+              <div class="meta-item"><div class="k">Nome do pai</div><div class="v">${esc(pessoa.nomePai || "-")}</div></div>
+              <div class="meta-item"><div class="k">CPF</div><div class="v">${esc(pessoa.cpf || "-")}</div></div>
+              <div class="meta-item"><div class="k">Data de nascimento</div><div class="v">${esc(formatarData(pessoa.dataNascimento) || "-")}</div></div>
+              <div class="meta-item"><div class="k">RG / documento</div><div class="v">${esc(pessoa.documento || "-")}</div></div>
+              <div class="meta-item"><div class="k">Atualizado em</div><div class="v">${esc(formatarDataHora(pessoa.atualizadoEm) || "-")}</div></div>
+              <div class="meta-item" style="grid-column:1 / -1;"><div class="k">Observações</div><div class="v">${esc(pessoa.observacoes || "-")}</div></div>
+            </div>
+
+            <div class="divider"></div>
+            <h4 class="section-title">Histórico de abordagens</h4>
+            <div class="history-list">
+              ${(pessoa.historicoAbordagens && pessoa.historicoAbordagens.length)
+                ? pessoa.historicoAbordagens.map(h => `
+                  <div class="history-item">
+                    <h4>${esc(formatarDataHora(h.dataHora) || "Sem data")}</h4>
+                    <p><strong>Localização:</strong> ${esc(h.localizacao || "-")}</p>
+                    <p><strong>Agente responsável:</strong> ${esc(h.agenteResponsavel || "-")}</p>
+                    <p><strong>Observação:</strong> ${esc(h.observacao || "-")}</p>
+                  </div>
+                `).join("")
+                : '<div class="empty">Nenhuma abordagem registrada.</div>'
+              }
+            </div>
+
+            ${permitirNovaAbordagem ? `
+              <div class="divider"></div>
+              <h4 class="section-title">Registrar nova abordagem</h4>
+              <div class="grid-3">
+                <div class="field">
+                  <label>Data/hora</label>
+                  <input id="novaAbordagemData" class="input" type="datetime-local" />
+                </div>
+                <div class="field">
+                  <label>Localização</label>
+                  <input id="novaAbordagemLocal" class="input" />
+                </div>
+                <div class="field">
+                  <label>Agente responsável</label>
+                  <input id="novaAbordagemAgente" class="input" />
+                </div>
+              </div>
+              <div class="field">
+                <label>Observação</label>
+                <textarea id="novaAbordagemObs"></textarea>
+              </div>
+              <div class="btn-row">
+                <button class="btn btn-success" onclick="salvarNovaAbordagem('${pessoa.id}')">Salvar abordagem</button>
+              </div>
+            ` : ""}
+          </div>
+        </div>
+      `;
+    }
+
+    function abrirEdicao(id, containerId){
+      const pessoa = db.find(p => p.id === id);
+      if(!pessoa) return;
+
+      const container = document.getElementById(containerId);
+      container.innerHTML = `
+        <div class="card" style="box-shadow:none;border-color:var(--line);">
+          <div class="card-header">
+            <h3>Editar cadastro</h3>
+            <p>Corrija ou atualize os dados e salve as alterações.</p>
+          </div>
+          <div class="card-body">
+            <div class="grid-2">
+              <div class="field">
+                <label>Nome completo</label>
+                <input id="editNomeCompleto" class="input" value="${attr(pessoa.nomeCompleto)}" />
+              </div>
+              <div class="field">
+                <label>CPF</label>
+                <input id="editCpf" class="input" value="${attr(pessoa.cpf)}" maxlength="14" />
+              </div>
+            </div>
+
+            <div class="grid-2">
+              <div class="field">
+                <label>Nome da mãe</label>
+                <input id="editNomeMae" class="input" value="${attr(pessoa.nomeMae)}" />
+              </div>
+              <div class="field">
+                <label>Nome do pai</label>
+                <input id="editNomePai" class="input" value="${attr(pessoa.nomePai)}" />
+              </div>
+            </div>
+
+            <div class="grid-2">
+              <div class="field">
+                <label>Data de nascimento</label>
+                <input id="editDataNascimento" class="input" type="date" value="${attr(pessoa.dataNascimento)}" />
+              </div>
+              <div class="field">
+                <label>RG / outro documento</label>
+                <input id="editDocumento" class="input" value="${attr(pessoa.documento)}" />
+              </div>
+            </div>
+
+            <div class="field">
+              <label>Observações</label>
+              <textarea id="editObservacoes">${escTextarea(pessoa.observacoes)}</textarea>
+            </div>
+
+            <div class="btn-row">
+              <button class="btn btn-success" onclick="salvarEdicao('${pessoa.id}','${containerId}')">Salvar alterações</button>
+              <button class="btn btn-secondary" onclick="cancelarEdicao('${pessoa.id}','${containerId}')">Cancelar</button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const editCpf = document.getElementById("editCpf");
+      editCpf.addEventListener("input", e => e.target.value = formatarCPF(e.target.value));
+    }
+
+    function salvarEdicao(id, containerId){
+      const idx = db.findIndex(p => p.id === id);
+      if(idx === -1) return;
+
+      const novoCpf = formatarCPF(document.getElementById("editCpf").value);
+      const cpfNormalizado = normalizarCPF(novoCpf);
+
+      if(!document.getElementById("editNomeCompleto").value.trim()){
+        alert("Nome completo é obrigatório.");
+        return;
+      }
+
+      if(cpfNormalizado.length !== 11){
+        alert("CPF inválido.");
+        return;
+      }
+
+      const duplicado = db.find(p => p.id !== id && normalizarCPF(p.cpf) === cpfNormalizado);
+      if(duplicado){
+        alert("Já existe outro cadastro com este CPF.");
+        return;
+      }
+
+      db[idx] = {
+        ...db[idx],
+        nomeCompleto: document.getElementById("editNomeCompleto").value.trim(),
+        nomeMae: document.getElementById("editNomeMae").value.trim(),
+        nomePai: document.getElementById("editNomePai").value.trim(),
+        cpf: novoCpf,
+        cpfNormalizado,
+        dataNascimento: document.getElementById("editDataNascimento").value,
+        documento: document.getElementById("editDocumento").value.trim(),
+        observacoes: document.getElementById("editObservacoes").value.trim(),
+        atualizadoEm: new Date().toISOString()
+      };
+
+      atualizarTudo();
+      const pessoa = db[idx];
+      const container = document.getElementById(containerId);
+      const modoIdentificar = containerId === "resultadoIdentificacao";
+      renderResultadoPessoa(container, pessoa, modoIdentificar);
+    }
+
+    function cancelarEdicao(id, containerId){
+      const pessoa = db.find(p => p.id === id);
+      if(!pessoa) return;
+      const container = document.getElementById(containerId);
+      const modoIdentificar = containerId === "resultadoIdentificacao";
+      renderResultadoPessoa(container, pessoa, modoIdentificar);
+    }
+
+    function salvarNovaAbordagem(id){
+      const pessoa = db.find(p => p.id === id);
+      if(!pessoa) return;
+
+      const dataHora = document.getElementById("novaAbordagemData").value || new Date().toISOString().slice(0,16);
+      const localizacao = document.getElementById("novaAbordagemLocal").value.trim();
+      const agenteResponsavel = document.getElementById("novaAbordagemAgente").value.trim();
+      const observacao = document.getElementById("novaAbordagemObs").value.trim();
+
+      pessoa.historicoAbordagens = pessoa.historicoAbordagens || [];
+      pessoa.historicoAbordagens.unshift({
+        id: gerarId(),
+        dataHora,
+        localizacao,
+        agenteResponsavel,
+        observacao
+      });
+      pessoa.atualizadoEm = new Date().toISOString();
+
+      atualizarTudo();
+      renderResultadoPessoa(els.resultadoIdentificacao, pessoa, true);
+      mostrarMensagem(els.identificarMsg, "ok", "Nova abordagem registrada com sucesso.");
+    }
+
+    function adicionarAbordagemPrompt(id, containerId){
+      const pessoa = db.find(p => p.id === id);
+      if(!pessoa) return;
+      const container = document.getElementById(containerId);
+      const modoIdentificar = containerId === "resultadoIdentificacao";
+      renderResultadoPessoa(container, pessoa, modoIdentificar);
+      setTimeout(() => {
+        document.getElementById("novaAbordagemLocal")?.focus();
+      }, 50);
+    }
+
+    function renderBase(){
+      if(db.length === 0){
+        els.baseLista.innerHTML = '<div class="empty">Nenhum cadastro na base local.</div>';
+        return;
+      }
+
+      els.baseLista.innerHTML = db.map(p => `
+        <div class="db-item">
+          <img class="db-photo" src="${p.foto || ''}" alt="Foto de ${esc(p.nomeCompleto)}" />
+          <div>
+            <div style="font-size:18px;font-weight:800;">${esc(p.nomeCompleto || "-")}</div>
+            <div class="small muted">CPF: ${esc(p.cpf || "-")}</div>
+            <div class="small muted">Mãe: ${esc(p.nomeMae || "-")}</div>
+            <div class="small muted">Pai: ${esc(p.nomePai || "-")}</div>
+            <div class="small muted">Documento: ${esc(p.documento || "-")}</div>
+            <div class="small muted">Abordagens: ${(p.historicoAbordagens || []).length}</div>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary" onclick="abrirPessoaPorId('${p.id}','consulta'); trocarAba('consulta')">Abrir</button>
+            <button class="btn btn-warning" onclick="abrirPessoaPorId('${p.id}','consulta'); trocarAba('consulta'); setTimeout(()=>abrirEdicao('${p.id}','resultadoConsulta'),80)">Editar</button>
+            <button class="btn btn-danger" onclick="excluirPessoa('${p.id}')">Excluir</button>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function excluirPessoa(id){
+      const pessoa = db.find(p => p.id === id);
+      if(!pessoa) return;
+      if(!confirm(`Excluir o cadastro de ${pessoa.nomeCompleto}?`)) return;
+      db = db.filter(p => p.id !== id);
+      atualizarTudo();
+      if(ultimoResultadoId === id){
+        els.resultadoIdentificacao.innerHTML = '<div class="empty">Nenhuma pessoa identificada ainda.</div>';
+        ultimoResultadoId = null;
+      }
+      els.resultadoConsulta.innerHTML = '<div class="empty">Registro removido da base.</div>';
+    }
+
+    function exportarBase(){
+      const blob = new Blob([JSON.stringify(db, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "rastro-base-local.json";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function importarBase(ev){
+      const file = ev.target.files[0];
+      if(!file) return;
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        try{
+          const parsed = JSON.parse(reader.result);
+          if(!Array.isArray(parsed)) throw new Error("JSON inválido");
+          db = parsed;
+          atualizarTudo();
+          alert("Base importada com sucesso.");
+          ev.target.value = "";
+        }catch(e){
+          alert("Arquivo JSON inválido.");
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function limparBase(){
+      if(!confirm("Deseja apagar toda a base local?")) return;
+      db = [];
+      atualizarTudo();
+      els.resultadoIdentificacao.innerHTML = '<div class="empty">Nenhuma pessoa identificada ainda.</div>';
+      els.resultadoConsulta.innerHTML = '<div class="empty">Preencha um ou mais campos e faça a pesquisa.</div>';
+    }
+
+    function normalizarCPF(v){
+      return (v || "").replace(/D/g, "");
+    }
+
+    function formatarCPF(v){
+      const n = normalizarCPF(v).slice(0,11);
+      return n
+        .replace(/^(d{3})(d)/, "$1.$2")
+        .replace(/^(d{3}).(d{3})(d)/, "$1.$2.$3")
+        .replace(/.(d{3})(d)/, ".$1-$2");
+    }
+
+    function formatarData(valor){
+      if(!valor) return "";
+      const d = new Date(valor + "T00:00:00");
+      if(isNaN(d)) return valor;
+      return d.toLocaleDateString("pt-BR");
+    }
+
+    function formatarDataHora(valor){
+      if(!valor) return "";
+      const d = new Date(valor);
+      if(isNaN(d)) return valor;
+      return d.toLocaleString("pt-BR");
+    }
+
+    function gerarId(){
+      return "P" + Date.now().toString(36) + Math.random().toString(36).slice(2,7).toUpperCase();
+    }
+
+    function val(id){
+      return document.getElementById(id).value.trim();
+    }
+
+    function esc(str){
+      return String(str ?? "")
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
+
+    function attr(str){
+      return esc(str).replaceAll("
+"," ");
+    }
+
+    function escTextarea(str){
+      return String(str ?? "")
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;");
+    }
+  </script>
 </body>
 </html>
