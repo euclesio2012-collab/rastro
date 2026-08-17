@@ -186,6 +186,24 @@
     font-size:12.5px; opacity:0; transition:all 0.25s ease; z-index:40; pointer-events:none; white-space:nowrap;
   }
   #toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
+
+  .manual-box{margin-top:18px;padding-top:16px;border-top:1px solid var(--line);}
+  .manual-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  @media(max-width:560px){.manual-grid{grid-template-columns:1fr;}}
+  .manual-grid .field-wrap{display:flex;flex-direction:column;gap:5px;}
+  .manual-grid label{font-size:11px;color:var(--text-muted);font-weight:700;text-transform:uppercase;letter-spacing:.06em;}
+  .manual-grid input,.edit-grid input,.edit-grid textarea{width:100%;box-sizing:border-box;background:var(--panel);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:10px;font:inherit;}
+  .manual-results{margin-top:12px;display:grid;gap:8px;}
+  .search-result{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--panel);}
+  .search-result .thumb{width:48px;height:48px;object-fit:cover;border-radius:8px;}
+  .search-result-main{flex:1;min-width:0;}
+  .search-result-name{font-weight:800;}
+  .search-result-meta{font-size:11px;color:var(--text-muted);margin-top:3px;}
+  .edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;}
+  .edit-grid .full{grid-column:1/-1;}
+  @media(max-width:560px){.edit-grid{grid-template-columns:1fr;}.edit-grid .full{grid-column:auto;}}
+  .detail-actions{display:flex;gap:8px;margin-top:14px;}
+  .detail-actions button{flex:1;}
 </style>
 </head>
 <body>
@@ -226,10 +244,22 @@
 
     <form id="form-cad" style="display:none;">
       <div class="field-label">Nome completo</div>
-      <input class="field" id="nome-cad" required placeholder="Nome do abordado">
+      <input class="field" id="nome-cad" required placeholder="Nome completo do abordado">
 
-      <div class="field-label">Documento (opcional)</div>
-      <input class="field" id="doc-cad" placeholder="RG / CPF">
+      <div class="field-label">Nome da mãe</div>
+      <input class="field" id="mae-cad" placeholder="Nome completo da mãe">
+
+      <div class="field-label">Nome do pai</div>
+      <input class="field" id="pai-cad" placeholder="Nome completo do pai">
+
+      <div class="field-label">CPF</div>
+      <input class="field" id="cpf-cad" inputmode="numeric" placeholder="000.000.000-00">
+
+      <div class="field-label">Data de nascimento</div>
+      <input class="field" id="nascimento-cad" type="date">
+
+      <div class="field-label">RG / outro documento</div>
+      <input class="field" id="doc-cad" placeholder="RG / outro documento">
 
       <div class="field-label">Observações (opcional)</div>
       <textarea class="field" id="obs-cad" placeholder="Informações relatadas pelo abordado"></textarea>
@@ -268,6 +298,21 @@
     <div class="section-sub" style="margin-top:6px;">Toque em "Escanear rosto" novamente a qualquer momento para uma nova busca.</div>
 
     <div id="result-id"></div>
+
+    <div class="manual-box">
+      <div class="section-title" style="font-size:16px;">Consulta manual</div>
+      <div class="section-sub">Pesquise por um ou mais dados cadastrais.</div>
+      <div class="manual-grid">
+        <div class="field-wrap"><label for="q-nome">Nome</label><input id="q-nome" placeholder="Nome completo"></div>
+        <div class="field-wrap"><label for="q-cpf">CPF</label><input id="q-cpf" inputmode="numeric" placeholder="CPF"></div>
+        <div class="field-wrap"><label for="q-mae">Mãe</label><input id="q-mae" placeholder="Nome da mãe"></div>
+        <div class="field-wrap"><label for="q-pai">Pai</label><input id="q-pai" placeholder="Nome do pai"></div>
+        <div class="field-wrap"><label for="q-nascimento">Data de nascimento</label><input id="q-nascimento" type="date"></div>
+        <div class="field-wrap"><label for="q-doc">RG / outro documento</label><input id="q-doc" placeholder="Documento"></div>
+      </div>
+      <button class="primary" id="btn-consulta-manual" style="width:100%;margin-top:12px;">Consultar cadastro</button>
+      <div id="manual-results" class="manual-results"></div>
+    </div>
   </section>
 
   <!-- BASE -->
@@ -594,13 +639,29 @@ function resetCadCamera(){
 
 async function submitCad(ev){
   ev.preventDefault();
-  if(!pendingCapture.cad){ return; }
+  if(!pendingCapture.cad){ toast('Capture o rosto antes de salvar.'); return; }
+
   const nome = document.getElementById('nome-cad').value.trim();
+  const mae = document.getElementById('mae-cad').value.trim();
+  const pai = document.getElementById('pai-cad').value.trim();
+  const cpf = document.getElementById('cpf-cad').value.trim();
+  const nascimento = document.getElementById('nascimento-cad').value;
   const doc = document.getElementById('doc-cad').value.trim();
   const obs = document.getElementById('obs-cad').value.trim();
   const consent = document.getElementById('consent-cad').checked;
   const agente = document.getElementById('operatorInput').value.trim() || 'não informado';
-  if(!nome || !consent){ toast('Preencha o nome e confirme o consentimento.'); return; }
+
+  if(!nome || !consent){
+    toast('Preencha o nome e confirme o consentimento.');
+    return;
+  }
+
+  const db = await loadDB();
+  const cpfDigits = cpf.replace(/\D/g,'');
+  if(cpfDigits && db.pessoas.some(p => String(p.cpf || '').replace(/\D/g,'') === cpfDigits)){
+    toast('Já existe um cadastro com este CPF.');
+    return;
+  }
 
   const btn = document.getElementById('save-cad');
   btn.disabled = true; btn.textContent = 'Salvando…';
@@ -613,38 +674,195 @@ async function submitCad(ev){
     agente
   };
 
-  const db = await loadDB();
   const pessoa = {
     id: uid(),
-    nome, documento: doc, observacoes: obs,
+    nome,
+    mae,
+    pai,
+    cpf,
+    nascimento,
+    documento: doc,
+    observacoes: obs,
     descriptor: pendingCapture.cad.descriptor,
     foto: pendingCapture.cad.dataUrl,
     abordagens: [record]
   };
+
   db.pessoas.push(pessoa);
   const ok = await saveDB(db);
+
   btn.disabled = false; btn.textContent = 'Registrar cadastro';
 
   if(ok){
-    document.getElementById('result-cad').innerHTML = `
-      <div class="card">
-        <div class="card-row">
-          <img class="thumb" src="${pessoa.foto}">
-          <div>
-            <div class="card-name">${escapeHtml(pessoa.nome)}</div>
-            <div class="card-meta mono">ID ${pessoa.id}</div>
-            <span class="tag ok">Cadastrado</span>
-          </div>
-        </div>
-        <div class="history-item" style="border-top:none; padding-top:12px;">
-          <div class="ts">${fmtTime(record.timestamp)}</div>
-          <div class="loc">${geo ? `${geo.lat.toFixed(5)}, ${geo.lng.toFixed(5)} — <a href="https://maps.google.com/?q=${geo.lat},${geo.lng}" target="_blank">ver mapa</a>` : 'localização indisponível'} · agente ${escapeHtml(agente)}</div>
-        </div>
-      </div>`;
+    document.getElementById('result-cad').innerHTML = renderPersonCard(pessoa, {
+      titleTag:'Cadastrado',
+      similarity:null,
+      newRecord:record,
+      geo
+    });
     toast('Pessoa cadastrada na base');
     resetCadCamera();
     refreshDbStats();
   }
+}
+
+
+function formatCPF(cpf){
+  const d=String(cpf||'').replace(/\D/g,'');
+  if(d.length!==11) return cpf || '—';
+  return d.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/,'$1.$2.$3-$4');
+}
+
+function personDetailsHtml(p){
+  const hist=(p.abordagens||[]).slice().reverse();
+  return `
+    <div class="card-row">
+      <img class="thumb" src="${p.foto || ''}">
+      <div>
+        <div class="card-name">${escapeHtml(p.nome || '')}</div>
+        <div class="card-meta mono">ID ${escapeHtml(p.id || '')}</div>
+      </div>
+    </div>
+    <div class="card-meta" style="margin-top:12px;">
+      <b>Mãe:</b> ${escapeHtml(p.mae || '—')}<br>
+      <b>Pai:</b> ${escapeHtml(p.pai || '—')}<br>
+      <b>CPF:</b> ${escapeHtml(formatCPF(p.cpf))}<br>
+      <b>Nascimento:</b> ${escapeHtml(p.nascimento || '—')}<br>
+      <b>Documento:</b> ${escapeHtml(p.documento || '—')}<br>
+      <b>Observações:</b> ${escapeHtml(p.observacoes || '—')}
+    </div>
+    <div class="field-label" style="margin-top:14px;">Histórico de abordagens (${hist.length})</div>
+    ${hist.length ? hist.map(h=>`
+      <div class="history-item">
+        <div class="ts">${fmtTime(h.timestamp)}</div>
+        <div class="loc">${h.lat != null ? `${Number(h.lat).toFixed(5)}, ${Number(h.lng).toFixed(5)} — <a href="https://maps.google.com/?q=${h.lat},${h.lng}" target="_blank">ver mapa</a>` : 'localização indisponível'} · agente ${escapeHtml(h.agente || 'não informado')}</div>
+      </div>`).join('') : '<div class="empty" style="padding:12px 0;">Nenhuma abordagem registrada.</div>'}
+  `;
+}
+
+function renderPersonCard(p, opts={}){
+  const tag=opts.titleTag || 'Cadastro';
+  const sim=opts.similarity != null ? `<div class="card-meta mono">Similaridade: ${(opts.similarity*100).toFixed(0)}%</div>` : '';
+  return `<div class="card" data-person-card="${escapeHtml(p.id)}">
+    ${personDetailsHtml(p)}
+    ${sim}
+    <div class="detail-actions">
+      <button class="ghost" onclick="openEditPerson('${p.id}')">Editar cadastro</button>
+    </div>
+  </div>`;
+}
+
+async function openEditPerson(id){
+  const db=await loadDB();
+  const p=db.pessoas.find(x=>String(x.id)===String(id));
+  if(!p){toast('Cadastro não encontrado.');return;}
+
+  const detail=document.createElement('div');
+  detail.className='card';
+  detail.id='edit-card-'+p.id;
+  detail.innerHTML=`
+    <div class="card-name">Editar cadastro</div>
+    <div class="edit-grid">
+      <div class="full"><div class="field-label">Nome completo</div><input id="edit-nome-${p.id}" value="${escapeHtml(p.nome||'')}"></div>
+      <div><div class="field-label">Nome da mãe</div><input id="edit-mae-${p.id}" value="${escapeHtml(p.mae||'')}"></div>
+      <div><div class="field-label">Nome do pai</div><input id="edit-pai-${p.id}" value="${escapeHtml(p.pai||'')}"></div>
+      <div><div class="field-label">CPF</div><input id="edit-cpf-${p.id}" value="${escapeHtml(p.cpf||'')}"></div>
+      <div><div class="field-label">Data de nascimento</div><input id="edit-nascimento-${p.id}" type="date" value="${escapeHtml(p.nascimento||'')}"></div>
+      <div class="full"><div class="field-label">RG / outro documento</div><input id="edit-doc-${p.id}" value="${escapeHtml(p.documento||'')}"></div>
+      <div class="full"><div class="field-label">Observações</div><textarea id="edit-obs-${p.id}">${escapeHtml(p.observacoes||'')}</textarea></div>
+    </div>
+    <div class="detail-actions">
+      <button class="ghost" onclick="this.closest('.card').remove()">Cancelar</button>
+      <button class="primary" onclick="saveEditedPerson('${p.id}')">Salvar alterações</button>
+    </div>`;
+  const card=document.querySelector(`[data-person-card="${CSS.escape(String(p.id))}"]`);
+  if(card) card.insertAdjacentElement('afterend',detail);
+  else document.getElementById('result-id').appendChild(detail);
+  detail.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+async function saveEditedPerson(id){
+  const db=await loadDB();
+  const p=db.pessoas.find(x=>String(x.id)===String(id));
+  if(!p){toast('Cadastro não encontrado.');return;}
+
+  const nome=document.getElementById(`edit-nome-${id}`).value.trim();
+  const mae=document.getElementById(`edit-mae-${id}`).value.trim();
+  const pai=document.getElementById(`edit-pai-${id}`).value.trim();
+  const cpf=document.getElementById(`edit-cpf-${id}`).value.trim();
+  const nascimento=document.getElementById(`edit-nascimento-${id}`).value;
+  const documento=document.getElementById(`edit-doc-${id}`).value.trim();
+  const observacoes=document.getElementById(`edit-obs-${id}`).value.trim();
+
+  if(!nome){toast('Nome completo é obrigatório.');return;}
+  const digits=cpf.replace(/\D/g,'');
+  if(digits && db.pessoas.some(x=>String(x.id)!==String(id) && String(x.cpf||'').replace(/\D/g,'')===digits)){
+    toast('Outro cadastro já utiliza este CPF.');
+    return;
+  }
+
+  Object.assign(p,{nome,mae,pai,cpf,nascimento,documento,observacoes,updatedAt:Date.now()});
+  if(await saveDB(db)){
+    toast('Cadastro atualizado.');
+    const editor=document.getElementById(`edit-card-${id}`);
+    if(editor) editor.remove();
+    refreshDbStats();
+    await showPersonInResult(p);
+    manualSearch();
+  }
+}
+
+async function showPersonInResult(p){
+  document.getElementById('result-id').innerHTML=renderPersonCard(p);
+}
+
+async function manualSearch(){
+  const values={
+    nome:document.getElementById('q-nome').value.trim(),
+    cpf:document.getElementById('q-cpf').value.trim(),
+    mae:document.getElementById('q-mae').value.trim(),
+    pai:document.getElementById('q-pai').value.trim(),
+    nascimento:document.getElementById('q-nascimento').value,
+    documento:document.getElementById('q-doc').value.trim()
+  };
+  const has=Object.values(values).some(Boolean);
+  if(!has){toast('Informe pelo menos um dado para consultar.');return;}
+
+  const db=await loadDB();
+  const norm=s=>String(s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const cpfq=values.cpf.replace(/\D/g,'');
+  const results=db.pessoas.filter(p=>{
+    if(values.nome && !norm(p.nome).includes(norm(values.nome))) return false;
+    if(values.mae && !norm(p.mae).includes(norm(values.mae))) return false;
+    if(values.pai && !norm(p.pai).includes(norm(values.pai))) return false;
+    if(cpfq && String(p.cpf||'').replace(/\D/g,'')!==cpfq) return false;
+    if(values.nascimento && p.nascimento!==values.nascimento) return false;
+    if(values.documento && !norm(p.documento).includes(norm(values.documento))) return false;
+    return true;
+  });
+
+  const box=document.getElementById('manual-results');
+  if(!results.length){
+    box.innerHTML='<div class="empty">Nenhum cadastro encontrado.</div>';
+    return;
+  }
+  box.innerHTML=results.map(p=>`
+    <div class="search-result">
+      <img class="thumb" src="${p.foto||''}">
+      <div class="search-result-main">
+        <div class="search-result-name">${escapeHtml(p.nome||'Sem nome')}</div>
+        <div class="search-result-meta">CPF: ${escapeHtml(formatCPF(p.cpf))} · Nascimento: ${escapeHtml(p.nascimento||'—')}</div>
+      </div>
+      <button class="ghost" onclick="selectManualPerson('${p.id}')">Ver</button>
+    </div>`).join('');
+}
+
+async function selectManualPerson(id){
+  const db=await loadDB();
+  const p=db.pessoas.find(x=>String(x.id)===String(id));
+  if(!p){toast('Cadastro não encontrado.');return;}
+  document.getElementById('result-id').innerHTML=renderPersonCard(p);
+  document.getElementById('result-id').scrollIntoView({behavior:'smooth',block:'start'});
 }
 
 // ---------- IDENTIFICAR flow ----------
@@ -685,34 +903,25 @@ async function captureId(){
   if(best && bestSim >= MATCH_THRESHOLD){
     setStatus('id','ok','correspondência encontrada');
     const record = { lat: geo?geo.lat:null, lng: geo?geo.lng:null, timestamp: Date.now(), agente };
+    best.abordagens = Array.isArray(best.abordagens) ? best.abordagens : [];
     best.abordagens.push(record);
     await saveDB(db);
 
-    const history = best.abordagens.slice(0,-1).reverse();
     document.getElementById('result-id').innerHTML = `
       <div class="card">
-        <div class="card-row">
-          <img class="thumb" src="${best.foto}">
-          <div>
-            <div class="card-name">${escapeHtml(best.nome)}</div>
-            <div class="card-meta mono">ID ${best.id} · similaridade ${(bestSim*100).toFixed(0)}%</div>
-            <span class="tag ok">Já cadastrado</span>
-          </div>
-        </div>
-        ${best.documento ? `<div class="card-meta" style="margin-top:8px;">Documento: ${escapeHtml(best.documento)}</div>` : ''}
-        ${best.observacoes ? `<div class="card-meta" style="margin-top:4px;">Obs.: ${escapeHtml(best.observacoes)}</div>` : ''}
+        <span class="tag ok">Já cadastrado</span>
+        <div class="card-meta" style="margin-top:8px;">Similaridade: ${(bestSim*100).toFixed(0)}%</div>
+        ${personDetailsHtml(best)}
         <div class="field-label" style="margin-top:14px;">Nova abordagem registrada</div>
-        <div class="history-item" style="border-top:none; padding-top:2px;">
+        <div class="history-item">
           <div class="ts">${fmtTime(record.timestamp)}</div>
           <div class="loc">${geo ? `${geo.lat.toFixed(5)}, ${geo.lng.toFixed(5)} — <a href="https://maps.google.com/?q=${geo.lat},${geo.lng}" target="_blank">ver mapa</a>` : 'localização indisponível'} · agente ${escapeHtml(agente)}</div>
         </div>
-        <div class="field-label">Histórico anterior (${history.length})</div>
-        ${history.length ? history.map(h=>`
-          <div class="history-item">
-            <div class="ts">${fmtTime(h.timestamp)}</div>
-            <div class="loc">${h.lat ? `${h.lat.toFixed(5)}, ${h.lng.toFixed(5)} — <a href="https://maps.google.com/?q=${h.lat},${h.lng}" target="_blank">ver mapa</a>` : 'localização indisponível'} · agente ${escapeHtml(h.agente)}</div>
-          </div>`).join('') : '<div class="empty" style="padding:16px 0;">Este era o primeiro registro.</div>'}
+        <div class="detail-actions">
+          <button class="ghost" onclick="openEditPerson('${best.id}')">Editar cadastro</button>
+        </div>
       </div>`;
+    refreshDbStats();
   } else {
     setStatus('id','err','sem correspondência');
     document.getElementById('result-id').innerHTML = `
@@ -764,7 +973,7 @@ async function refreshDbStats(){
       <img class="thumb" src="${p.foto}">
       <div>
         <div class="card-name" style="font-size:14.5px;">${escapeHtml(p.nome)}</div>
-        <div class="card-meta">${escapeHtml(p.documento || 'sem documento')}</div>
+        <div class="card-meta">CPF: ${escapeHtml(formatCPF(p.cpf))} · Doc.: ${escapeHtml(p.documento || '—')}</div>
       </div>
       <div class="count"><b>${p.abordagens.length}</b>abordagem${p.abordagens.length===1?'':'ns'}</div>
     </div>
@@ -781,32 +990,16 @@ async function refreshDbStats(){
 }
 
 function showDbDetail(p){
-  const detail = document.getElementById('db-detail');
-  const hist = p.abordagens.slice().reverse();
-  detail.innerHTML = `
+  const detail=document.getElementById('db-detail');
+  detail.innerHTML=`
     <div class="back-link" id="back-to-list">‹ voltar à lista</div>
-    <div class="card">
-      <div class="card-row">
-        <img class="thumb" src="${p.foto}">
-        <div>
-          <div class="card-name">${escapeHtml(p.nome)}</div>
-          <div class="card-meta mono">ID ${p.id}</div>
-        </div>
-      </div>
-      ${p.documento ? `<div class="card-meta" style="margin-top:8px;">Documento: ${escapeHtml(p.documento)}</div>` : ''}
-      ${p.observacoes ? `<div class="card-meta" style="margin-top:4px;">Obs.: ${escapeHtml(p.observacoes)}</div>` : ''}
-      <div class="field-label">Histórico de abordagens (${hist.length})</div>
-      ${hist.map(h=>`
-        <div class="history-item">
-          <div class="ts">${fmtTime(h.timestamp)}</div>
-          <div class="loc">${h.lat ? `${h.lat.toFixed(5)}, ${h.lng.toFixed(5)} — <a href="https://maps.google.com/?q=${h.lat},${h.lng}" target="_blank">ver mapa</a>` : 'localização indisponível'} · agente ${escapeHtml(h.agente)}</div>
-        </div>`).join('')}
-    </div>`;
-  document.getElementById('db-list').style.display = 'none';
-  detail.style.display = 'block';
-  document.getElementById('back-to-list').addEventListener('click', ()=>{
-    detail.style.display = 'none';
-    document.getElementById('db-list').style.display = 'block';
+    ${renderPersonCard(p)}
+  `;
+  document.getElementById('db-list').style.display='none';
+  detail.style.display='block';
+  document.getElementById('back-to-list').addEventListener('click',()=>{
+    detail.style.display='none';
+    document.getElementById('db-list').style.display='block';
   });
 }
 
@@ -833,6 +1026,7 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
 });
 document.getElementById('capture-cad').addEventListener('click', captureCad);
 document.getElementById('capture-id').addEventListener('click', captureId);
+document.getElementById('btn-consulta-manual').addEventListener('click', manualSearch);
 document.getElementById('cancel-cad').addEventListener('click', resetCadCamera);
 document.getElementById('form-cad').addEventListener('submit', submitCad);
 document.getElementById('flip-cad').addEventListener('click', ()=>flipCamera('cad', document.getElementById('video-cad')));
